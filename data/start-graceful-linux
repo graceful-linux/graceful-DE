@@ -1,0 +1,10 @@
+#!/bin/bash
+
+start()
+{
+  if ! pgrep -f "$1"; then
+    exec "$@" &
+  fi
+}
+
+start graceful-wm

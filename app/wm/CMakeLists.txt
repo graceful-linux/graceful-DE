@@ -26,5 +26,5 @@ target_link_libraries(graceful-wm-msg
         ${YAJL_LIBRARIES}
 )
 
-install(TARGETS graceful-wm         DESTINATION bin)
-install(TARGETS graceful-wm-msg     DESTINATION bin)
+install(TARGETS graceful-wm         DESTINATION /usr/bin)
+install(TARGETS graceful-wm-msg     DESTINATION /usr/bin)

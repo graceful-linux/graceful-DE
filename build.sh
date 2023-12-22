@@ -11,8 +11,9 @@ packageMD5=""
 # shellcheck disable=SC2046
 curDir=$(dirname $(realpath -- "$0"))
 workDir=${curDir}/out
-packageName="graceful-DE-${version}.tar.gz"
+packageName="graceful-linux-${version}.tar.gz"
 
+[[ -d "${workDir}" ]] && rm -rf "${workDir}"
 [[ ! -d "${workDir}" ]] && mkdir -p "${workDir}"
 
 sed -i -E "s/^set\(PROJECT_VERSION_MAJOR\ [0-9]+\)$/set\(PROJECT_VERSION_MAJOR\ ${versionMajor}\)/" \
@@ -24,7 +25,7 @@ sed -i -E "s/^set\(PROJECT_VERSION_PATCH\ [0-9]+\)$/set\(PROJECT_VERSION_PATCH\ 
 sed -i -E "s/^set\(PROJECT_VERSION_TWEAK\ [0-9]+\)$/set\(PROJECT_VERSION_TWEAK\ ${versionTweak}\)/" \
     "${curDir}/CMakeLists.txt"
 
-tar cf "${packageName}" ./app ./docs ./CMakeLists.txt ./LICENSE ./README.md
+tar cf "${packageName}" ./data/ ./app ./docs ./CMakeLists.txt ./LICENSE ./README.md
 [[ -f "./${packageName}" ]] && mv "./${packageName}" "${workDir}"
 [[ -f "${workDir}/${packageName}" ]] && packageMD5=$(sha512sum "${workDir}/${packageName}" | awk '{print $1}')
 
@@ -32,15 +33,15 @@ tar cf "${packageName}" ./app ./docs ./CMakeLists.txt ./LICENSE ./README.md
 cat << EOF > ${workDir}/PKGBUILD
 # Maintainer: dingjing <dingjing@live.cn>
 
-pkgname=graceful-DE
+pkgname=graceful-linux
 pkgver=${versionMajor}.${versionMinor}.${versionPatch}
 pkgrel=${versionTweak}
 pkgdesc='An ultra-lightweight tiled desktop environment.'
-url='https://github.com/graceful-linux/graceful-DE'
+url='https://github.com/graceful-linux/graceful-linux'
 arch=('x86_64')
 license=('MIT')
 groups=('graceful-linux')
-depends=('libxft' 'libx11' 'yajl' 'libxinerama' 'fontconfig') 
+depends=('libxft' 'libx11' 'yajl' 'libxinerama' 'fontconfig' 'kitty') 
 makedepends=('cmake' 'gcc')
 source=("${workDir}/${packageName}")
 
@@ -62,3 +63,7 @@ package() {
 }
 
 EOF
+
+cd "${workDir}"
+makepkg
+cd "${curDir}"

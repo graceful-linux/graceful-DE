@@ -20,4 +20,5 @@ pkg_check_modules(YAJL          REQUIRED yajl)
 pkg_check_modules(XINERAMA      REQUIRED xinerama)
 pkg_check_modules(FONT_CONFIG   REQUIRED fontconfig)
 
+include(data/data.cmake)
 add_subdirectory(app/wm)

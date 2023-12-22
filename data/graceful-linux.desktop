@@ -1,0 +1,8 @@
+[Desktop Entry]
+Version=1.0
+Name=GracefulLinux
+Comment=Run GracefulLinux as your desktop environment
+Exec=/usr/bin/start-graceful-linux
+Icon=
+Type=Application
+DesktopNames=GracefulLinux
