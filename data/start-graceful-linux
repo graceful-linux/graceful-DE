@@ -1,10 +1,24 @@
 #!/bin/bash
 
-start()
+function start()
 {
-  if ! pgrep -f "$1"; then
-    exec "$@" &
-  fi
+    if ! pgrep -f "$1"; then
+        exec "$@" &
+    fi
+}
+
+function start_terminator()
+{
+    if [[ -x /usr/bin/kitty ]]; then
+        /usr/bin/kitty
+    elif [[ -x /usr/bin/terminator ]]; then
+        /usr/bin/terminator
+    else
+        /usr/bin/xterm
+    fi
 }
 
 start graceful-wm
+
+start_terminator
+
