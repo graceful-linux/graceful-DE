@@ -41,7 +41,7 @@ url='https://github.com/graceful-linux/graceful-linux'
 arch=('x86_64')
 license=('MIT')
 groups=('graceful-linux')
-depends=('libxft' 'libx11' 'yajl' 'libxinerama' 'fontconfig' 'kitty') 
+depends=('libxft' 'libx11' 'yajl' 'libxinerama' 'fontconfig' 'terminator') 
 makedepends=('cmake' 'gcc')
 source=("${workDir}/${packageName}")
 

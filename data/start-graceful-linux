@@ -1,5 +1,8 @@
 #!/bin/bash
 
+set -x
+set -e
+
 function start()
 {
     if ! pgrep -f "$1"; then
@@ -7,16 +10,48 @@ function start()
     fi
 }
 
+function env_value()
+{
+    if [[ -x "/usr/bin/bash" ]]; then
+        export SHELL=/bin/bash
+    fi
+
+    if [[ -x "/usr/bin/env" ]]; then
+        export _=/usr/bin/env
+    fi
+
+    if [[ -x "/usr/bin/ibus-daemon" ]]; then
+        export QT_IM_MODULE=ibus
+        export GTK_IM_MODULE=ibus
+        export XMODIFIERS="@im=ibus"
+    elif [[ -x "/usr/bin/fcitx" ]]; then
+        export QT_IM_MODULE=fcitx
+        export GTK_IM_MODULE=fcitx
+        export XMODIFIERS="@im=fcitx"
+    fi
+}
+
+function start_program()
+{
+    if [[ -x "/usr/bin/ibus-daemon" ]]; then
+        ibus-daemon -x -n graceful-linux -d
+    fi
+}
+
 function start_terminator()
 {
-    if [[ -x /usr/bin/kitty ]]; then
-        /usr/bin/kitty
+    if [[ -x /usr/bin/graceful-terminator ]]; then
+        /usr/bin/graceful-terminator
     elif [[ -x /usr/bin/terminator ]]; then
         /usr/bin/terminator
     else
         /usr/bin/xterm
     fi
 }
+
+env_value
+
+start_program
 
 start graceful-wm
 
