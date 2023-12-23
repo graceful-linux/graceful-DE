@@ -3,16 +3,15 @@
 /* See LICENSE file for copyright and license details. */
 
 /* appearance */
-static const unsigned int borderpx = 5;     /* border pixel of windows */
-static const unsigned int gappx = 5;        /* gaps between windows */
+static const unsigned int borderpx = 3;     /* border pixel of windows */
+static const unsigned int gappx = 2;        /* gaps between windows */
 static const unsigned int snap = 32;        /* snap pixel */
 static const int showbar = 1;               /* 0 means no bar */
 static const int topbar = 1;                /* 0 means bottom bar */
 static const int usealtbar = 1;             /* 1 means use non-dwm status bar */
 static const char *altbarclass = "Polybar"; /* Alternate bar class name */
 static const char *alttrayname = "tray";    /* Polybar tray instance name */
-static const char *altbarcmd =
-    "$HOME/.dwmpobar"; /* Alternate bar launch command */
+static const char *altbarcmd = "$HOME/.dwmpobar"; /* Alternate bar launch command */
 /*  Display modes of the tab bar: never shown, always shown, shown only in  */
 /*  monocle mode in the presence of several windows.                        */
 /*  Modes after showtab_nmodes are disabled.                                */
@@ -95,25 +94,13 @@ static const Rule rules[] = {
 
     {"Google-chrome", "google-chrome", NULL, 1 << 2, 0, 0},
 
-    {"qqmusic", NULL, NULL, 1 << 3, 0, 0},
-    {"Spotify", NULL, NULL, 1 << 3, 0, 0},
-    {"yesplaymusic", NULL, NULL, 1 << 3, 0, 0},
-    {"electron-netease-cloud-music", NULL, NULL, 1 << 3, 0, 0},
-    {"music", "st", NULL, 1 << 3, 0, 1},
-
     {"Steam", NULL, NULL, 1 << 4, 0, 0},
 
-    {"Postman", "postman", NULL, 1 << 5, 0, -1},
-
-    {"wechat.exe", NULL, NULL, 1 << 6, 0, 0},
     {"discord", "discord", NULL, 1 << 6, 0, 1},
 
-    {"icalingua", "icalingua", NULL, 1 << 7, 0, 0},
     {"TelegramDesktop", NULL, NULL, 1 << 7, 0, 1},
 
     {"stalonetray", NULL, NULL, 1 << 8, 1, 0},
-    {"qBittorrent", NULL, NULL, 1 << 8, 0, 0},
-    {"Clash for Windows", NULL, NULL, 1 << 8, 0, 1},
 
     {"wemeetapp", NULL, NULL, 0, 1, -1},
     {"xdman-Main", NULL, NULL, 0, 1, -1},
@@ -142,38 +129,37 @@ static const Layout layouts[] = {
 
 };
 
-/* key definitions */
-#define MODKEY Mod4Mask
-#define TAGKEYS(KEY, TAG)                                                       \
-    {MODKEY, KEY, view, {.ui = 1 << TAG}},                                      \
-    {MODKEY | ControlMask, KEY, toggleview, {.ui = 1 << TAG}},                  \
-    {MODKEY | ShiftMask, KEY, tag, {.ui = 1 << TAG}},                           \
-    {MODKEY | ControlMask | ShiftMask, KEY, toggletag, {.ui = 1 << TAG}},
+/**
+ * @brief 按键定义(必须按下的是 Win 键)
+ *  MOD1: 常规操作
+ *
+ *  Grave(`)
+ *
+ */
+#define MOD1_KEY        Mod4Mask                        // Mod4Mask(win键), Mod1Mask(Alt), Mod5Mask(option)
+#define MOD2_KEY        (MOD1_KEY | ShiftMask)
+//#define
+
+#define TARGET_KEYS(KEY, TAG)                                                     \
+    {MOD1_KEY, KEY, view, {.ui = 1 << TAG}},                                      \
+    {MOD1_KEY | ControlMask, KEY, toggleview, {.ui = 1 << TAG}},                  \
+    {MOD1_KEY | ShiftMask, KEY, tag, {.ui = 1 << TAG}},                           \
+    {MOD1_KEY | ControlMask | ShiftMask, KEY, toggletag, {.ui = 1 << TAG}},
 
 /* helper for spawning shell commands in the pre dwm-5.0 fashion */
-#define SHCMD(cmd)                                                              \
-{                                                                               \
-    .v = (const char *[]) { "/bin/sh", "-c", cmd, NULL }                        \
-}
-
 #define CMD(cmd)                                                                \
 {                                                                               \
     .v = (const char *[]) { "/bin/sh", "-c", cmd, NULL }                        \
 }
 
 /* commands */
-static char dmenumon[2] =
-    "0"; /* component of dmenucmd, manipulated in spawn() */
-static const char *termcmd[] = {"kitty", NULL};
+static char dmenumon[2] = "0"; /* component of dmenucmd, manipulated in spawn() */
+static const char *termcmd[] = {"terminator", NULL};
 static const char scratchpadname[] = "scratchpad";
-static const char *scratchpadcmd[] = {"st", "-t", scratchpadname, "-g", "48x12", "-e", "cava", NULL};
 
-static const char *rofidruncmd[] = {"rofi", "-show", "drun", NULL};
 static const char *windowswitchcmd[] = {"rofi", "-show", "window", NULL};
 
 static const char *dmenucmd[] = {"dmenu_run_history", NULL};
-static const char *searchmenucmd[] = {"searchmenu", NULL};
-static const char *recordmenucmd[] = {"recordmenu", NULL};
 static const char *toggletraycmd[] = {"toggletray", NULL};
 
 static const char *upvol[] = {"/usr/bin/pactl", "set-sink-volume", "0", "+3%", NULL};
@@ -183,89 +169,84 @@ static const char *mutevol[] = {"/usr/bin/pactl", "set-sink-mute", "0", "toggle"
 static const char *upbrt[] = {"light", "-A", "5", NULL};
 static const char *downbrt[] = {"light", "-U", "5", NULL};
 
+/**
+ * @brief 快捷键，依次是：功能切换键 + 按键 + 执行函数 + 执行函数的参数
+ */
 static Key keys[] = {
-    /* modifier                     key             function        argument */
-    {MODKEY | ShiftMask, XK_Return, spawn, CMD("st -e zsh")},
-    {MODKEY, XK_Return, spawn, {.v = termcmd}},
-    {MODKEY, XK_grave, togglescratch, {.v = scratchpadcmd}},
-    {MODKEY, XK_d, spawn, {.v = dmenucmd}},
-    {MODKEY, XK_r, spawn, {.v = rofidruncmd}},
-    {MODKEY, XK_s, spawn, {.v = searchmenucmd}},
-    {MODKEY, XK_p, spawn, {.v = recordmenucmd}},
-    {MODKEY, XK_w, spawn, {.v = windowswitchcmd}},
-    {MODKEY | ShiftMask, XK_t, spawn, {.v = toggletraycmd}},
-
-    {MODKEY, XK_b, togglebar, {0}},
-    {MODKEY | ControlMask, XK_m, focusmaster, {0}},
-    {MODKEY, XK_j, focusstack, {.i = +1}},
-    {MODKEY, XK_k, focusstack, {.i = -1}},
-    /* {MODKEY, XK_i, incnmaster, {.i = +1}}, */
-    /* {MODKEY, XK_o, incnmaster, {.i = -1}}, */
-    {MODKEY, XK_comma, setmfact, {.f = -0.05}},
-    {MODKEY, XK_period, setmfact, {.f = +0.05}},
-    {MODKEY | ControlMask, XK_Return, zoom, {0}},
-    {MODKEY, XK_Tab, view, {0}},
-    {MODKEY, XK_q, killclient, {0}},
-    {MODKEY, XK_y, tabmode, {-1}},
-    {MODKEY, XK_t, setlayout, {.v = &layouts[0]}},
-    {MODKEY, XK_f, setlayout, {.v = &layouts[1]}},
-    {MODKEY, XK_m, setlayout, {.v = &layouts[2]}},
-    {MODKEY, XK_g, setlayout, {.v = &layouts[3]}},
-    {MODKEY, XK_u, setlayout, {.v = &layouts[4]}},
-    {MODKEY, XK_i, setlayout, {.v = &layouts[5]}},
-    {MODKEY, XK_o, setlayout, {.v = &layouts[6]}},
-    {MODKEY | ShiftMask, XK_f, fullscreen, {0}},
-    {MODKEY | ShiftMask, XK_space, togglefloating, {0}},
-    {MODKEY, XK_0, view, {.ui = ~0}},
-    {MODKEY | ShiftMask, XK_0, tag, {.ui = ~0}},
-    {MODKEY, XK_h, focusmon, {.i = -1}},
-    {MODKEY, XK_l, focusmon, {.i = +1}},
-    {MODKEY | ShiftMask, XK_h, tagmon, {.i = -1}},
-    {MODKEY | ShiftMask, XK_l, tagmon, {.i = +1}},
-    {MODKEY, XK_F5, xrdb, {.v = NULL}},
+    {MOD1_KEY, XK_Return, spawn, {.v = termcmd}},
+    {MOD1_KEY, XK_d, spawn, {.v = dmenucmd}},
+    {MOD1_KEY, XK_w, spawn, {.v = windowswitchcmd}},
+//    {MOD1_KEY | ShiftMask, XK_t, spawn, {.v = toggletraycmd}},
+//    {MOD1_KEY, XK_b, togglebar, {0}},
+    /* {MOD1_KEY, XK_o, incnmaster, {.i = -1}}, */
+//    {MOD1_KEY | ControlMask, XK_m, focusmaster, {0}},
+    {MOD1_KEY, XK_Right, focusstack, {.i = +1}},
+    {MOD1_KEY, XK_Left,  focusstack, {.i = -1}},
+//    {MOD1_KEY, XK_k, focusmon, {.i = -1}},
+//    {MOD1_KEY, XK_l, focusmon, {.i = +1}},
+//    {MOD1_KEY, XK_comma, setmfact, {.f = -0.05}},
+//    {MOD1_KEY, XK_period, setmfact, {.f = +0.05}},
+//    {MOD1_KEY | ControlMask, XK_Return, zoom, {0}},
+    {MOD1_KEY, XK_Tab, view, {0}},
+    {MOD1_KEY, XK_c, spawn, CMD("clion")},
+    {MOD1_KEY, XK_q, killclient, {0}},
+    {MOD1_KEY, XK_y, tabmode, {-1}},
+    {MOD1_KEY, XK_t, setlayout, {.v = &layouts[0]}},
+    {MOD1_KEY, XK_f, setlayout, {.v = &layouts[1]}},
+    {MOD1_KEY, XK_m, setlayout, {.v = &layouts[2]}},
+    {MOD1_KEY, XK_g, setlayout, {.v = &layouts[3]}},
+    {MOD1_KEY, XK_u, setlayout, {.v = &layouts[4]}},
+    {MOD1_KEY, XK_i, setlayout, {.v = &layouts[5]}},
+    {MOD1_KEY, XK_o, setlayout, {.v = &layouts[6]}},
+//    {MOD1_KEY | ShiftMask, XK_f, fullscreen, {0}},
+//    {MOD1_KEY | ShiftMask, XK_space, togglefloating, {0}},
+    {MOD1_KEY, XK_0, view, {.ui = ~0}},
+    {MOD2_KEY, XK_0, tag, {.ui = ~0}},
+    {MOD1_KEY | ShiftMask, XK_h, tagmon, {.i = -1}},
+    {MOD1_KEY | ShiftMask, XK_l, tagmon, {.i = +1}},
+    {MOD1_KEY, XK_F5, xrdb, {.v = NULL}},
 
     /* My Own App Start Ways */
-    {MODKEY, XK_e, spawn, CMD("firefox-nightly")},
-    {MODKEY, XK_z, spawn, CMD("obsidian")},
-    {MODKEY, XK_v, spawn, CMD("glrnvim")},
-    {MODKEY | ShiftMask, XK_e, spawn, CMD("google-chrome-stable")},
-    {MODKEY | ShiftMask, XK_q, spawn, CMD("xkill")},
-    {MODKEY | ShiftMask, XK_s, spawn, CMD("flameshot gui")},
-    {MODKEY | ShiftMask, XK_n, spawn, CMD("nautilus")},
-    {MODKEY | ShiftMask, XK_m, spawn, CMD("st -c music -e ncmpcpp")},
+//    {MOD1_KEY, XK_e, spawn, CMD("firefox-nightly")},
+    {MOD2_KEY, XK_q, spawn, CMD("xkill")},
+    {MOD2_KEY, XK_s, spawn, CMD("flameshot gui")},
+    {MOD2_KEY, XK_n, spawn, CMD("nautilus")},
+//    {MOD2_KEY, XK_m, spawn, CMD("st -c music -e ncmpcpp")},
 
-    {Mod1Mask | ControlMask, XK_Delete, spawn, CMD("betterlockscreen -l")},
+//    {Mod1Mask | ControlMask, XK_Delete, spawn, CMD("betterlockscreen -l")},
 
-    {Mod1Mask | ShiftMask, XK_p, spawn, CMD("sh ~/.dwmpobar")},
+//    {Mod1Mask | ShiftMask, XK_p, spawn, CMD("sh ~/.dwmpobar")},
 
-    {Mod1Mask, XK_v, spawn, CMD("neovide")},
-    {Mod1Mask, XK_i, spawn, CMD("idea")},
-    {Mod1Mask, XK_c, spawn, CMD("clion")},
-    {Mod1Mask, XK_p, spawn, CMD("pycharm")},
-    {Mod1Mask, XK_g, spawn, CMD("goland")},
 
     /* Mpd control */
-    {MODKEY | ControlMask, XK_p, spawn, CMD("mpc toggle")},
-    {MODKEY | ControlMask, XK_Left, spawn, CMD("mpc prev")},
-    {MODKEY | ControlMask, XK_Right, spawn, CMD("mpc next")},
+//    {MOD1_KEY | ControlMask, XK_p, spawn, CMD("mpc toggle")},
+//    {MOD1_KEY | ControlMask, XK_Left, spawn, CMD("mpc prev")},
+//    {MOD1_KEY | ControlMask, XK_Right, spawn, CMD("mpc next")},
 
-    {Mod1Mask | ControlMask, XK_p, spawn, CMD("playerctl play-pause")},
-    {Mod1Mask | ControlMask, XK_Left, spawn, CMD("playerctl previous")},
-    {Mod1Mask | ControlMask, XK_Right, spawn, CMD("playerctl next")},
+//    {Mod1Mask | ControlMask, XK_p, spawn, CMD("playerctl play-pause")},
+//    {Mod1Mask | ControlMask, XK_Left, spawn, CMD("playerctl previous")},
+//    {Mod1Mask | ControlMask, XK_Right, spawn, CMD("playerctl next")},
 
     /* XF86Keys */
-    {0, XF86XK_AudioMute, spawn, {.v = mutevol}},
-    {0, XF86XK_AudioLowerVolume, spawn, {.v = downvol}},
-    {0, XF86XK_AudioRaiseVolume, spawn, {.v = upvol}},
-    {0, XF86XK_MonBrightnessUp, spawn, {.v = upbrt}},
-    {0, XF86XK_MonBrightnessDown, spawn, {.v = downbrt}},
+//    {0, XF86XK_AudioMute, spawn, {.v = mutevol}},
+//    {0, XF86XK_AudioLowerVolume, spawn, {.v = downvol}},
+//    {0, XF86XK_AudioRaiseVolume, spawn, {.v = upvol}},
+//    {0, XF86XK_MonBrightnessUp, spawn, {.v = upbrt}},
+//    {0, XF86XK_MonBrightnessDown, spawn, {.v = downbrt}},
 
-    {MODKEY | ControlMask, XK_q, quit, {0}},
-    {MODKEY | ControlMask, XK_r, quit, {1}},
+    {MOD1_KEY | ControlMask, XK_q, quit, {0}},
+    {MOD1_KEY | ControlMask, XK_r, quit, {1}},
 
-    TAGKEYS(XK_1, 0) TAGKEYS(XK_2, 1) TAGKEYS(XK_3, 2) TAGKEYS(XK_4, 3)
-        TAGKEYS(XK_5, 4) TAGKEYS(XK_6, 5) TAGKEYS(XK_7, 6) TAGKEYS(XK_8, 7)
-            TAGKEYS(XK_9, 8)};
+    TARGET_KEYS(XK_1, 0)
+    TARGET_KEYS(XK_2, 1)
+    TARGET_KEYS(XK_3, 2)
+    TARGET_KEYS(XK_4, 3)
+    TARGET_KEYS(XK_5, 4)
+    TARGET_KEYS(XK_6, 5)
+    TARGET_KEYS(XK_7, 6)
+    TARGET_KEYS(XK_8, 7)
+    TARGET_KEYS(XK_9, 8)
+};
 
 /* button definitions */
 /* click can be ClkTagBar, ClkLtSymbol, ClkStatusText, ClkWinTitle,
@@ -277,13 +258,13 @@ static Button buttons[] = {
     {ClkLtSymbol, 0, Button3, setlayout, {.v = &layouts[2]}},
     {ClkWinTitle, 0, Button2, zoom, {0}},
     {ClkStatusText, 0, Button2, spawn, {.v = termcmd}},
-    {ClkClientWin, MODKEY, Button1, movemouse, {0}},
-    {ClkClientWin, MODKEY, Button2, togglefloating, {0}},
-    {ClkClientWin, MODKEY, Button3, resizemouse, {0}},
+    {ClkClientWin, MOD1_KEY, Button1, movemouse, {0}},
+    {ClkClientWin, MOD1_KEY, Button2, togglefloating, {0}},
+    {ClkClientWin, MOD1_KEY, Button3, resizemouse, {0}},
     {ClkTagBar, 0, Button1, view, {0}},
     {ClkTagBar, 0, Button3, toggleview, {0}},
-    {ClkTagBar, MODKEY, Button1, tag, {0}},
-    {ClkTagBar, MODKEY, Button3, toggletag, {0}},
+    {ClkTagBar, MOD1_KEY, Button1, tag, {0}},
+    {ClkTagBar, MOD1_KEY, Button3, toggletag, {0}},
     {ClkTabBar, 0, Button1, focuswin, {0}},
 };
 

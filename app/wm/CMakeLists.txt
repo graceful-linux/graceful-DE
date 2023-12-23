@@ -16,6 +16,9 @@ target_link_libraries(graceful-wm
         ${XINERAMA_LIBRARIES}
         ${FONT_CONFIG_LIBRARIES}
 )
+target_compile_definitions(graceful-wm PRIVATE
+        -DXINERAMA
+)
 
 
 add_executable(graceful-wm-msg dwm-msg.c)

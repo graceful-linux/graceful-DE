@@ -638,7 +638,8 @@ void buttonpress(XEvent *e) {
     }
 }
 
-void checkotherwm(void) {
+void checkotherwm(void)
+{
   xerrorxlib = XSetErrorHandler(xerrorstart);
   /* this causes an error if some other window manager is running */
   XSelectInput(dpy, DefaultRootWindow(dpy), SubstructureRedirectMask);
@@ -723,7 +724,8 @@ void clientmessage(XEvent *e) {
   }
 }
 
-void compileregexes(void) {
+void compileregexes(void)
+{
   char regex_error_buffer[256];
   int i;
   int status;
@@ -1239,7 +1241,8 @@ void expose(XEvent *e) {
   }
 }
 
-void focus(Client *c) {
+void focus(Client *c)
+{
   if (!c || !ISVISIBLE(c))
     for (c = selmon->stack; c && !ISVISIBLE(c); c = c->snext)
       ;
@@ -1423,7 +1426,8 @@ void grabkeys(void) {
   }
 }
 
-int handlexevent(struct epoll_event *ev) {
+int handlexevent(struct epoll_event *ev)
+{
   if (ev->events & EPOLLIN) {
     XEvent ev;
     while (running && XPending(dpy)) {
@@ -1464,7 +1468,8 @@ static int isuniquegeom(XineramaScreenInfo *unique, size_t n,
 }
 #endif /* XINERAMA */
 
-void keypress(XEvent *e) {
+void keypress(XEvent *e)
+{
   unsigned int i;
   KeySym keysym;
   XKeyEvent *ev;
@@ -1491,7 +1496,8 @@ void killclient(const Arg *arg) {
   }
 }
 
-void loadxrdb() {
+void loadxrdb()
+{
   Display *display;
   char *resm;
   XrmDatabase xrdb;
@@ -1966,7 +1972,8 @@ void restack(Monitor *m) {
     ;
 }
 
-void run(void) {
+void run(void)
+{
   int event_count = 0;
   const int MAX_EVENTS = 10;
   struct epoll_event events[MAX_EVENTS];
@@ -2079,7 +2086,8 @@ void runautostart(void) {
   free(path);
 }
 
-void scan(void) {
+void scan(void)
+{
   unsigned int i, num;
   Window d1, d2, *wins = NULL;
   XWindowAttributes wa;
@@ -2277,7 +2285,8 @@ void setmfact(const Arg *arg) {
   arrange(selmon);
 }
 
-void setup(void) {
+void setup(void)
+{
   int i;
   XSetWindowAttributes wa;
   Atom utf8string;
@@ -2409,7 +2418,8 @@ void showhide(Client *c) {
   }
 }
 
-void sigchld(int unused) {
+void sigchld(int unused)
+{
   if (signal(SIGCHLD, sigchld) == SIG_ERR)
     die("can't install SIGCHLD handler:");
   while (0 < waitpid(-1, NULL, WNOHANG))
@@ -2426,7 +2436,8 @@ void sigterm(int unused) {
   quit(&a);
 }
 
-void spawn(const Arg *arg) {
+void spawn(const Arg *arg)
+{
   if (arg->v == dmenucmd)
     dmenumon[0] = '0' + selmon->num;
   selmon->tagset[selmon->seltags] &= ~scratchtag;
@@ -2435,7 +2446,7 @@ void spawn(const Arg *arg) {
       close(ConnectionNumber(dpy));
     setsid();
     execvp(((char **)arg->v)[0], (char **)arg->v);
-    fprintf(stderr, "dwm: execvp %s", ((char **)arg->v)[0]);
+    fprintf(stderr, "graceful-wm: execvp %s", ((char **)arg->v)[0]);
     perror(" failed");
     exit(EXIT_SUCCESS);
   }
@@ -2487,7 +2498,8 @@ void tile(Monitor *m) {
     }
 }
 
-void togglebar(const Arg *arg) {
+void togglebar(const Arg *arg)
+{
   /**
    * Polybar tray does not raise maprequest event. It must be manually scanned
    * for. Scanning it too early while the tray is being populated would give
@@ -2569,7 +2581,8 @@ void toggletag(const Arg *arg) {
   }
 }
 
-void toggleview(const Arg *arg) {
+void toggleview(const Arg *arg)
+{
   unsigned int newtagset =
       selmon->tagset[selmon->seltags] ^ (arg->ui & TAGMASK);
   int i;
@@ -2754,7 +2767,8 @@ void updateclientlist() {
                       PropModeAppend, (unsigned char *)&(c->win), 1);
 }
 
-int updategeom(void) {
+int updategeom(void)
+{
   int dirty = 0;
 
 #ifdef XINERAMA
@@ -2935,7 +2949,8 @@ void updatewmhints(Client *c) {
   }
 }
 
-void view(const Arg *arg) {
+void view(const Arg *arg)
+{
   int i;
   unsigned int tmptag;
 
@@ -3023,7 +3038,8 @@ int wmclasscontains(Window win, const char *class, const char *name) {
 /* There's no way to check accesses to destroyed windows, thus those cases are
  * ignored (especially on UnmapNotify's). Other types of errors call Xlibs
  * default error handler, which may call exit. */
-int xerror(Display *dpy, XErrorEvent *ee) {
+int xerror(Display *dpy, XErrorEvent *ee)
+{
   if (ee->error_code == BadWindow ||
       (ee->request_code == X_SetInputFocus && ee->error_code == BadMatch) ||
       (ee->request_code == X_PolyText8 && ee->error_code == BadDrawable) ||
@@ -3070,15 +3086,18 @@ void zoom(const Arg *arg) {
   pop(c);
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[])
+{
   if (argc == 2 && !strcmp("-v", argv[1]))
-    die("dwm-" VERSION);
+    die("graceful-wm(fork from dwm) " VERSION);
   else if (argc != 1)
-    die("usage: dwm [-v]");
+    die("usage: graceful-wm [-v]");
   if (!setlocale(LC_CTYPE, "") || !XSupportsLocale())
     fputs("warning: no locale support\n", stderr);
   if (!(dpy = XOpenDisplay(NULL)))
-    die("dwm: cannot open display");
+    die("graceful-wm: cannot open display");
+
+
   compileregexes();
   checkotherwm();
   XrmInitialize();
@@ -3098,7 +3117,8 @@ int main(int argc, char *argv[]) {
   return EXIT_SUCCESS;
 }
 
-void focusmaster(const Arg *arg) {
+void focusmaster(const Arg *arg)
+{
   Client *c;
 
   if (selmon->nmaster < 1)
