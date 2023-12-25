@@ -20,6 +20,7 @@ pkg_check_modules(X11           REQUIRED x11)
 pkg_check_modules(YAJL          REQUIRED yajl)
 pkg_check_modules(X_EXT         REQUIRED xext)
 pkg_check_modules(X_RENDER      REQUIRED xrender)
+pkg_check_modules(GLIB          REQUIRED glib-2.0)
 pkg_check_modules(XINERAMA      REQUIRED xinerama)
 pkg_check_modules(FONT_CONFIG   REQUIRED fontconfig)
 

@@ -6,6 +6,7 @@ target_include_directories(graceful-wm PRIVATE
         ${XFT_INCLUDE_DIRS}
         ${X11_INCLUDE_DIRS}
         ${YAJL_INCLUDE_DIRS}
+        ${GLIB_INCLUDE_DIRS}
         ${X_EXT_INCLUDE_DIRS}
         ${XINERAMA_INCLUDE_DIRS}
         ${X_RENDER_INCLUDE_DIRS}
@@ -15,6 +16,7 @@ target_link_libraries(graceful-wm
         ${XFT_LIBRARIES}
         ${X11_LIBRARIES}
         ${YAJL_LIBRARIES}
+        ${GLIB_LIBRARIES}
         ${X_EXT_LIBRARIES}
         ${X_RENDER_LIBRARIES}
         ${XINERAMA_LIBRARIES}

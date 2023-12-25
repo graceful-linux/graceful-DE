@@ -65,7 +65,7 @@
  * taps into the many layout options that flextile-deluxe offers to produce a window
  * title section in the bar that is representative of what is shown on screen.
  */
-#define BAR_FLEXWINTITLE_PATCH 1
+#define BAR_FLEXWINTITLE_PATCH 0
 
 /* This patch adds a context menu for layout switching.
  *   - xmenu needs to be installed.
