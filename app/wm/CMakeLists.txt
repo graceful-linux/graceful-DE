@@ -6,13 +6,17 @@ target_include_directories(graceful-wm PRIVATE
         ${XFT_INCLUDE_DIRS}
         ${X11_INCLUDE_DIRS}
         ${YAJL_INCLUDE_DIRS}
+        ${X_EXT_INCLUDE_DIRS}
         ${XINERAMA_INCLUDE_DIRS}
+        ${X_RENDER_INCLUDE_DIRS}
         ${FONT_CONFIG_INCLUDE_DIRS}
 )
 target_link_libraries(graceful-wm
         ${XFT_LIBRARIES}
         ${X11_LIBRARIES}
         ${YAJL_LIBRARIES}
+        ${X_EXT_LIBRARIES}
+        ${X_RENDER_LIBRARIES}
         ${XINERAMA_LIBRARIES}
         ${FONT_CONFIG_LIBRARIES}
 )
@@ -21,7 +25,7 @@ target_compile_definitions(graceful-wm PRIVATE
 )
 
 
-add_executable(graceful-wm-msg dwm-msg.c)
+add_executable(graceful-wm-msg patch/ipc/dwm-msg.c)
 target_include_directories(graceful-wm-msg PRIVATE
         ${YAJL_INCLUDE_DIRS}
 )
