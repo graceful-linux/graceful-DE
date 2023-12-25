@@ -889,7 +889,6 @@ static void timer_handler(int signum)
                   localTime->tm_min,
                   localTime->tm_sec
                   );
-        printf ("%s\n", buf);
         XChangeProperty(dpy, root, gsCustomStatusAtoms[CUSTOM_STATUS_TIME], utf8string, 8, PropModeReplace, (unsigned char *) (buf), (int) strlen(buf));
     }
 }
@@ -1898,12 +1897,10 @@ dirtomon(int dir)
 
 void drawbar(Monitor *m)
 {
-    Bar *bar;
-
     #if !BAR_FLEXWINTITLE_PATCH
     if (m->showbar)
     #endif // BAR_FLEXWINTITLE_PATCH
-    for (bar = m->bar; bar; bar = bar->next) {
+    for (Bar* bar = m->bar; bar; bar = bar->next) {
         drawbarwin(bar);
     }
 }
@@ -1912,8 +1909,9 @@ void
 drawbars(void)
 {
     Monitor *m;
-    for (m = mons; m; m = m->next)
+    for (m = mons; m; m = m->next) {
         drawbar(m);
+    }
 }
 
 void drawbarwin(Bar *bar)
@@ -2082,8 +2080,7 @@ enternotify(XEvent *e)
 }
 #endif // FOCUSONCLICK_PATCH
 
-void
-expose(XEvent *e)
+void expose(XEvent *e)
 {
     Monitor *m;
     XExposeEvent *ev = &e->xexpose;
