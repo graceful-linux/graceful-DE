@@ -890,6 +890,21 @@ static void timer_handler(int signum)
                   localTime->tm_sec
                   );
         XChangeProperty(dpy, root, gsCustomStatusAtoms[CUSTOM_STATUS_TIME], utf8string, 8, PropModeReplace, (unsigned char *) (buf), (int) strlen(buf));
+
+        {
+            XEvent ev;
+            ev.type = ClientMessage;
+            ev.xclient.window = root;
+            ev.xclient.message_type = gsCustomStatusAtoms[CUSTOM_STATUS_TIME];
+            ev.xclient.format = 8;
+            ev.xclient.data.l[0] = 0;
+            ev.xclient.data.l[1] = 0;
+            ev.xclient.data.l[2] = 0;
+            ev.xclient.data.l[3] = 0;
+            ev.xclient.data.l[4] = 0;
+            XSendEvent (dpy, root, False, StructureNotifyMask, &ev);
+            XFlush (dpy);
+        }
     }
 }
 
@@ -1438,8 +1453,8 @@ clientmessage(XEvent *e)
     }
     #endif // BAR_SYSTRAY_PATCH
 
-    if (!c)
-        return;
+    if (!c) { return; }
+
     if (cme->message_type == netatom[NetWMState]) {
         if (cme->data.l[1] == netatom[NetWMFullscreen]
         || cme->data.l[2] == netatom[NetWMFullscreen]) {
@@ -1456,23 +1471,27 @@ clientmessage(XEvent *e)
         }
     } else if (cme->message_type == netatom[NetActiveWindow]) {
         #if FOCUSONNETACTIVE_PATCH
-        if (c->tags & c->mon->tagset[c->mon->seltags])
+        if (c->tags & c->mon->tagset[c->mon->seltags]) {
             focus(c);
+        }
         else {
             for (i = 0; i < NUMTAGS && !((1 << i) & c->tags); i++);
             if (i < NUMTAGS) {
-                if (c != selmon->sel)
+                if (c != selmon->sel) {
                     unfocus(selmon->sel, 0, NULL);
+                }
                 selmon = c->mon;
-                if (((1 << i) & TAGMASK) != selmon->tagset[selmon->seltags])
+                if (((1 << i) & TAGMASK) != selmon->tagset[selmon->seltags]) {
                     view(&((Arg) { .ui = 1 << i }));
+                }
                 focus(c);
                 restack(selmon);
             }
         }
         #else
-        if (c != selmon->sel && !c->isurgent)
+        if (c != selmon->sel && !c->isurgent) {
             seturgent(c, 1);
+        }
         #endif // FOCUSONNETACTIVE_PATCH
     }
 }
@@ -2727,18 +2746,17 @@ manage(Window w, XWindowAttributes *wa)
     #endif // BAR_EWMHTAGS_PATCH
 }
 
-void
-mappingnotify(XEvent *e)
+void mappingnotify(XEvent *e)
 {
     XMappingEvent *ev = &e->xmapping;
 
     XRefreshKeyboardMapping(ev);
-    if (ev->request == MappingKeyboard)
+    if (ev->request == MappingKeyboard) {
         grabkeys();
+    }
 }
 
-void
-maprequest(XEvent *e)
+void maprequest(XEvent *e)
 {
     static XWindowAttributes wa;
     XMapRequestEvent *ev = &e->xmaprequest;
@@ -3361,8 +3379,9 @@ run(void)
         }
         #endif // XKB_PATCH
 
-        if (handler[ev.type])
+        if (handler[ev.type]) {
             handler[ev.type](&ev); /* call handler */
+        }
     }
 }
 #endif // IPC_PATCH | RESTARTSIG_PATCH
@@ -5086,16 +5105,19 @@ view(const Arg *arg)
     #endif // BAR_EWMHTAGS_PATCH
 }
 
-Client *
-wintoclient(Window w)
+Client* wintoclient(Window w)
 {
     Client *c;
     Monitor *m;
 
-    for (m = mons; m; m = m->next)
-        for (c = m->clients; c; c = c->next)
-            if (c->win == w)
+    for (m = mons; m; m = m->next) {
+        for (c = m->clients; c; c = c->next) {
+            if (c->win == w) {
                 return c;
+            }
+        }
+    }
+
     return NULL;
 }
 
