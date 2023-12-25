@@ -31,29 +31,43 @@ function env_value()
     fi
 }
 
-function start_program()
-{
-    if [[ -x "/usr/bin/ibus-daemon" ]]; then
-        ibus-daemon -x -n graceful-linux -d
-    fi
-}
-
 function start_terminator()
 {
     if [[ -x /usr/bin/graceful-terminator ]]; then
-        /usr/bin/graceful-terminator
+        start /usr/bin/graceful-terminator
     elif [[ -x /usr/bin/terminator ]]; then
-        /usr/bin/terminator
+        start /usr/bin/terminator
     else
-        /usr/bin/xterm
+        start /usr/bin/xterm
     fi
 }
 
+# FIXME:// 此处需要通用的解决方案
+# 打开双屏
+start xrandr --output eDP-2 --auto --primary --output  HDMI-1-0 --auto --right-of eDP-2
+
+
+# 设置 桌面背景
+start feh --bg-scale /usr/share/themes/graceful-theme/wallpapers/graceful-wm-wallpaper.svg
+
+# 导出一些环境变量
 env_value
 
-start_program
+# 启动 ibus 输入法
+if [[ -x "/usr/bin/ibus-daemon" ]]; then
+  ibus-daemon -x -n graceful-linux -d
+fi
 
-start graceful-wm
+# 启动窗口组合管理器
+start /usr/bin/graceful-compton --config /etc/graceful-linux/compton.conf
 
-start_terminator
+# 启动终端
+# start_terminator
+
+# 启动窗口管理器
+# shellcheck disable=SC2046
+while [ ! $(pgrep graceful-wm) ]; do
+    /usr/bin/graceful-wm
+    sleep 1
+done
 

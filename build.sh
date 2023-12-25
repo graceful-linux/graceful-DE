@@ -2,7 +2,7 @@
 set -e
 
 versionMajor=0
-versionMinor=1
+versionMinor=2
 versionPatch=0
 versionTweak=0
 version="${versionMajor}.${versionMinor}.${versionPatch}.${versionTweak}"
@@ -41,7 +41,9 @@ url='https://github.com/graceful-linux/graceful-linux'
 arch=('x86_64')
 license=('MIT')
 groups=('graceful-linux')
-depends=('libxft' 'libx11' 'yajl' 'libxinerama' 'fontconfig' 'terminator') 
+depends=('libxft' 'libx11' 'yajl' 'libxinerama' 'fontconfig' 'terminator' 'feh' 'ibus' 'ibus-rime' 'libglvnd' 'libxext'
+    'libxfixes' 'dbus' 'libdrm' 'libxrandr' 'libxrender' 'pcre' 'libxdamage' 'glib2' 'libconfig' 'libxcomposite'
+)
 makedepends=('cmake' 'gcc')
 source=("${workDir}/${packageName}")
 

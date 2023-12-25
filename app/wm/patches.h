@@ -932,7 +932,7 @@
  *
  * https://github.com/bakkeby/patches/wiki/renamedscratchpads
  */
-#define RENAMED_SCRATCHPADS_PATCH 1
+#define RENAMED_SCRATCHPADS_PATCH 0
 
 /* Renamed scratchpads option to auto-hide scratchpads when moving to a different tag.
  * This behaviour is similar to that of the (multiple) scratchpads patch. */
@@ -1344,7 +1344,7 @@
  * https://github.com/bakkeby/patches/blob/master/dwm/dwm-vanitygaps-6.2.diff
  * https://github.com/bakkeby/patches/blob/master/dwm/dwm-cfacts-vanitygaps-6.2.diff
  */
-#define VANITYGAPS_PATCH 0
+#define VANITYGAPS_PATCH 1
 
 /* This patch adds outer gaps for the monocle layout.
  * Most gaps patches tries to avoid gaps on the monocle layout, as it is often used as a
