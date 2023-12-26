@@ -2,7 +2,7 @@
 #define COMPTON_XRESCHECK_H
 
 #include "common.h"
-#include <uthash.h>
+#include "uthash.h"
 
 typedef struct {
   XID xid;

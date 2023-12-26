@@ -1,6 +1,6 @@
 project(graceful-compton C)
 
-add_executable(graceful-compton compton.c c2.c dbus.c opengl.c )
+add_executable(graceful-compton compton.c c2.c dbus.c opengl.c xrescheck.c)
 target_include_directories(graceful-compton PRIVATE
         ${GL_INCLUDE_DIRS}
         ${XFT_INCLUDE_DIRS}
@@ -37,6 +37,7 @@ target_link_libraries(graceful-compton -lm -lrt
 )
 target_compile_definitions(graceful-compton PRIVATE
         -DCONFIG_C2
+        -DCONFIG_XRC
         -DCONFIG_DBUS
         -DCONFIG_XSYNC
         -DCONFIG_XINERAMA
@@ -45,6 +46,8 @@ target_compile_definitions(graceful-compton PRIVATE
         -DCONFIG_REGEX_PCRE
         -DCONFIG_VSYNC_OPENGL
         -DCONFIG_REGEX_PCRE_JIT
+        -DCONFIG_VSYNC_OPENGL_FBO
+        -DCONFIG_VSYNC_OPENGL_VBO
         -DCONFIG_VSYNC_OPENGL_GLSL
 )
 
