@@ -4143,10 +4143,6 @@ spawn(const Arg *arg)
     #if RIODRAW_PATCH
     pid_t pid;
     #endif // RIODRAW_PATCH
-    #if !NODMENU_PATCH
-    if (arg->v == dmenucmd)
-        dmenumon[0] = '0' + selmon->num;
-    #endif // NODMENU_PATCH
 
     #if RIODRAW_PATCH
     if ((pid = fork()) == 0)

@@ -1,4 +1,5 @@
 /* See LICENSE file for copyright and license details. */
+#include <stdlib.h>
 
 /* appearance */
 #if ROUNDED_CORNERS_PATCH
@@ -164,7 +165,6 @@ static const char font[]                 = "monospace 10";
 #else
 static const char *fonts[]               = { "monospace:size=10" };
 #endif // BAR_PANGO_PATCH
-static const char dmenufont[]            = "monospace:size=10";
 
 static char c000000[]                    = "#000000"; // placeholder value
 
@@ -854,22 +854,9 @@ static const char *xkb_layouts[]  = {
 #if !NODMENU_PATCH
 static char dmenumon[2] = "0"; /* component of dmenucmd, manipulated in spawn() */
 #endif // NODMENU_PATCH
-static const char *dmenucmd[] = {
-	"dmenu_run",
-	#if !NODMENU_PATCH
-	"-m", dmenumon,
-	#endif // NODMENU_PATCH
-	"-fn", dmenufont,
-	"-nb", normbgcolor,
-	"-nf", normfgcolor,
-	"-sb", selbgcolor,
-	"-sf", selfgcolor,
-	#if BAR_DMENUMATCHTOP_PATCH
-	topbar ? NULL : "-b",
-	#endif // BAR_DMENUMATCHTOP_PATCH
-	NULL
-};
-static const char *termcmd[]  = { "terminator", NULL };
+
+static const char* termcmd[] = { "terminator", NULL };
+static const char* menuRun[] = { "graceful-run-rofi", NULL };
 
 #if BAR_STATUSCMD_PATCH
 #if BAR_DWMBLOCKS_PATCH
@@ -900,10 +887,9 @@ static const Key keys[] = {
 	#if KEYMODES_PATCH
 	{ MODKEY,                       XK_Escape,     setkeymode,             {.ui = COMMANDMODE} },
 	#endif // KEYMODES_PATCH
-	{ MODKEY,                       XK_p,          spawn,                  {.v = dmenucmd } },
+	{ MODKEY,                       XK_p,          spawn,                  {.v = menuRun } },
 	{ MODKEY,                       XK_Return,     spawn,                  {.v = termcmd } },               // Alt + Enter 打开终端
 	#if RIODRAW_PATCH
-	{ MODKEY|ControlMask,           XK_p,          riospawnsync,           {.v = dmenucmd } },
 	{ MODKEY|ControlMask,           XK_Return,     riospawn,               {.v = termcmd } },
 	{ MODKEY,                       XK_s,          rioresize,              {0} },
 	#endif // RIODRAW_PATCH
@@ -1314,8 +1300,6 @@ static const Command commands[] = {
 	{ {ControlMask, 0,          0,         0},    {XK_w,      XK_less,  0,         0},            setmfact,        {.f = -0.05} },
 	{ {ControlMask, ShiftMask,  0,         0},    {XK_w,      XK_less,  0,         0},            setmfact,        {.f = +0.05} },
 	{ {ControlMask, ShiftMask,  0,         0},    {XK_w,      XK_0,     0,         0},            setmfact,        {.f = +1.50} },
-	{ {ShiftMask,   0,          0,         0},    {XK_period, XK_e,     0,         0},            spawn,           {.v = dmenucmd} },
-	{ {ShiftMask,   0,          0,         0},    {XK_period, XK_o,     0,         0},            spawn,           {.v = dmenucmd} },
 	{ {ShiftMask,   0,          0,         0},    {XK_period, XK_q,     XK_Return, 0},            quit,            {0} },
 	{ {ShiftMask,   0,          0,         0},    {XK_period, XK_b,     XK_d,      XK_Return},    killclient,      {0} },
 	{ {ShiftMask,   0,          0,         0},    {XK_period, XK_b,     XK_n,      XK_Return},    focusstack,      {.i = +1} },
@@ -1331,9 +1315,6 @@ static const Command commands[] = {
 #endif //
 static const Button buttons[] = {
 	/* click                event mask           button          function        argument */
-	#if BAR_STATUSBUTTON_PATCH
-	{ ClkButton,            0,                   Button1,        spawn,          {.v = dmenucmd } },
-	#endif // BAR_STATUSBUTTON_PATCH
 	{ ClkLtSymbol,          0,                   Button1,        setlayout,      {0} },
 	#if BAR_LAYOUTMENU_PATCH
 	{ ClkLtSymbol,          0,                   Button3,        layoutmenu,     {0} },

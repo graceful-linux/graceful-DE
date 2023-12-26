@@ -1,8 +1,7 @@
 static Systray *systray = NULL;
 static unsigned long systrayorientation = _NET_SYSTEM_TRAY_ORIENTATION_HORZ;
 
-int
-width_systray(Bar *bar, BarArg *a)
+int width_systray(Bar *bar, BarArg *a)
 {
 	unsigned int w = 0;
 	Client *i;
@@ -10,8 +9,9 @@ width_systray(Bar *bar, BarArg *a)
 		return 1;
 	if (showsystray) {
 		for (i = systray->icons; i; w += i->w + systrayspacing, i = i->next);
-		if (!w)
+		if (!w) {
 			XMoveWindow(dpy, systray->win, -systray->h, bar->by);
+        }
 	}
 	return w ? w + lrpad - systrayspacing : 0;
 }
@@ -35,7 +35,7 @@ draw_systray(Bar *bar, BarArg *a)
 		wa.override_redirect = True;
 		wa.event_mask = ButtonPressMask|ExposureMask;
 		wa.border_pixel = 0;
-		systray->h = MIN(a->h, drw->fonts->h);
+		systray->h = MIN(a->h, drw->fonts->h - 1);
 		#if BAR_ALPHA_PATCH
 		wa.background_pixel = 0;
 		wa.colormap = cmap;

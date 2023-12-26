@@ -43,6 +43,7 @@ license=('MIT')
 groups=('graceful-linux')
 depends=('libxft' 'libx11' 'yajl' 'libxinerama' 'fontconfig' 'terminator' 'feh' 'ibus' 'ibus-rime' 'libglvnd' 'libxext'
     'libxfixes' 'dbus' 'libdrm' 'libxrandr' 'libxrender' 'pcre' 'libxdamage' 'glib2' 'libconfig' 'libxcomposite'
+    'rofi' 'xdotool'
 )
 makedepends=('cmake' 'gcc')
 source=("${workDir}/${packageName}")
