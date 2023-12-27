@@ -379,13 +379,9 @@
 #if HORIZGRID_LAYOUT
 #include "layout_horizgrid.h"
 #endif
-#if MONOCLE_LAYOUT
-#include "layout_monocle.h"
-#endif
 #if NROWGRID_LAYOUT
 #include "layout_nrowgrid.h"
 #endif
-#if TILE_LAYOUT
 #include "layout_tile.h"
-#endif
+#include "layout_monocle.h"
 

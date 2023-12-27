@@ -350,9 +350,7 @@
 #include "seamless_restart.c"
 #endif
 /* Layouts */
-#if BSTACK_LAYOUT || BSTACKHORIZ_LAYOUT || CENTEREDMASTER_LAYOUT || CENTEREDFLOATINGMASTER_LAYOUT || COLUMNS_LAYOUT || DECK_LAYOUT || TILE_LAYOUT
 #include "layout_facts.c"
-#endif
 #if BSTACK_LAYOUT
 #include "layout_bstack.c"
 #endif
@@ -386,13 +384,9 @@
 #if HORIZGRID_LAYOUT
 #include "layout_horizgrid.c"
 #endif
-#if MONOCLE_LAYOUT
-#include "layout_monocle.c"
-#endif
 #if NROWGRID_LAYOUT
 #include "layout_nrowgrid.c"
 #endif
-#if TILE_LAYOUT
 #include "layout_tile.c"
-#endif
+#include "layout_monocle.c"
 

@@ -8,6 +8,7 @@ target_include_directories(graceful-wm PRIVATE
         ${YAJL_INCLUDE_DIRS}
         ${GLIB_INCLUDE_DIRS}
         ${X_EXT_INCLUDE_DIRS}
+        ${IMLIB_INCLUDE_DIRS}
         ${XINERAMA_INCLUDE_DIRS}
         ${X_RENDER_INCLUDE_DIRS}
         ${FONT_CONFIG_INCLUDE_DIRS}
@@ -18,6 +19,7 @@ target_link_libraries(graceful-wm
         ${YAJL_LIBRARIES}
         ${GLIB_LIBRARIES}
         ${X_EXT_LIBRARIES}
+        ${IMLIB_LIBRARIES}
         ${X_RENDER_LIBRARIES}
         ${XINERAMA_LIBRARIES}
         ${FONT_CONFIG_LIBRARIES}

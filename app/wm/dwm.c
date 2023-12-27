@@ -43,9 +43,9 @@
 #include <X11/Xft/Xft.h>
 #include <sys/procfs.h>
 
-#include "patches.h"
 #include "drw.h"
 #include "util.h"
+#include "patches.h"
 
 #if BAR_FLEXWINTITLE_PATCH
 #ifndef FLEXTILE_DELUXE_LAYOUT
@@ -2154,11 +2154,7 @@ focus(Client *c)
         #endif // BAR_FLEXWINTITLE_PATCH
         setfocus(c);
     } else {
-        #if NODMENU_PATCH
-        XSetInputFocus(dpy, selmon->bar && selmon->bar->win ? selmon->bar->win : root, RevertToPointerRoot, CurrentTime);
-        #else
         XSetInputFocus(dpy, root, RevertToPointerRoot, CurrentTime);
-        #endif // NODMENU_PATCH
         XDeleteProperty(dpy, root, netatom[NetActiveWindow]);
     }
     selmon->sel = c;
@@ -3073,7 +3069,6 @@ resizeclient(Client *c, int x, int y, int w, int h)
     #if ROUNDED_CORNERS_PATCH
     drawroundedcorners(c);
     #endif // ROUNDED_CORNERS_PATCH
-    #if NOBORDER_PATCH
     if (((nexttiled(c->mon->clients) == c && !nexttiled(c->next))
         #if MONOCLE_LAYOUT
         || &monocle == c->mon->lt[c->mon->sellt]->arrange
@@ -3101,7 +3096,6 @@ resizeclient(Client *c, int x, int y, int w, int h)
         c->h = wc.height += c->bw * 2;
         wc.border_width = 0;
     }
-    #endif // NOBORDER_PATCH
     XConfigureWindow(dpy, c->win, CWX|CWY|CWWidth|CWHeight|CWBorderWidth, &wc);
     configure(c);
     XSync(dpy, False);
@@ -3279,7 +3273,7 @@ restack(Monitor *m)
     }
     XSync(dpy, False);
     while (XCheckMaskEvent(dpy, EnterWindowMask, &ev));
-    #if WARP_PATCH && FLEXTILE_DELUXE_LAYOUT || WARP_PATCH && MONOCLE_LAYOUT
+    #if WARP_PATCH && FLEXTILE_DELUXE_LAYOUT || WARP_PATCH
     #if FLEXTILE_DELUXE_LAYOUT
     for (n = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), n++);
     #endif // FLEXTILE_DELUXE_LAYOUT

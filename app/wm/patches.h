@@ -19,7 +19,7 @@
  * Awesomebar takes precedence over fancybar.
  * https://dwm.suckless.org/patches/awesomebar/
  */
-#define BAR_AWESOMEBAR_PATCH 0
+#define BAR_AWESOMEBAR_PATCH 1
 
 /* This patch depends on statuscmd patch and adds integration with a (patched)
  * dwmblocks instance to give a clickable status bar. One must not necessarily
@@ -58,8 +58,10 @@
  * Awesomebar takes precedence over fancybar. Fancybar takes precedence over
  * the centeredwindowname patch.
  * https://dwm.suckless.org/patches/fancybar/
+ *
+ * 显示所有窗口的标题
  */
-#define BAR_FANCYBAR_PATCH 1
+#define BAR_FANCYBAR_PATCH 0
 
 /* Being an evolution of the bartabgroups patch the flexwintitle patch specifically
  * taps into the many layout options that flextile-deluxe offers to produce a window
@@ -73,6 +75,7 @@
  *   - Place layoutmenu.sh in PATH.
  *   - The text of the menu items is for display only. Name them however you want.
  * https://dwm.suckless.org/patches/layoutmenu/
+ * 右键菜单可以选择窗口布局
  */
 #define BAR_LAYOUTMENU_PATCH 0
 
@@ -95,7 +98,7 @@
  * https://gitlab.com/udiboy1209-suckless/dwm/-/commit/071f5063e8ac4280666828179f92788d893eea40#4b1a539194be7467cefbda22f675a3b7c19ceca7
  * https://dwm.suckless.org/patches/statuscolors/
  */
-#define BAR_POWERLINE_STATUS_PATCH 0
+#define BAR_POWERLINE_STATUS_PATCH 1
 
 /* Adds powerline arrows for the tags.
  * https://gitlab.com/udiboy1209-suckless/dwm/-/commit/071f5063e8ac4280666828179f92788d893eea40#4b1a539194be7467cefbda22f675a3b7c19ceca7
@@ -180,7 +183,7 @@
 /* This patch underlines the selected tag, or optionally all tags.
  * https://dwm.suckless.org/patches/underlinetags/
  */
-#define BAR_UNDERLINETAGS_PATCH 0
+#define BAR_UNDERLINETAGS_PATCH 1
 
 /* This patch adds the window icon next to the window title in the bar.
  *
@@ -198,10 +201,10 @@
  * https://github.com/AdamYuan/dwm-winicon
  * https://dwm.suckless.org/patches/winicon
  */
-#define BAR_WINICON_PATCH 0
+#define BAR_WINICON_PATCH 1
 
 /* Show window title in bar */
-#define BAR_WINTITLE_PATCH 1
+#define BAR_WINTITLE_PATCH 0
 
 /* Shows window titles in the bar, but only for floating clients.
  * This depends on code from the flexwintitle patch.
@@ -784,7 +787,7 @@
  * used for the main monitor. E.g. normal vertical split for main monitor and
  * horizontal split for the second.
  */
-#define MONITOR_RULES_PATCH 0
+#define MONITOR_RULES_PATCH 1
 
 /* Always display the the monocle-symbol as defined in config.h if the monocle-layout
  * is activated. Do not display the number of open clients in the current tag.
@@ -802,7 +805,7 @@
 /* This patch allows you to move and resize dwm's clients using keyboard bindings.
  * https://dwm.suckless.org/patches/moveresize/
  */
-#define MOVERESIZE_PATCH 0
+#define MOVERESIZE_PATCH 1
 
 /* This patch allows you to move clients around in the stack and swap them with the master.
  * https://dwm.suckless.org/patches/movestack/
@@ -840,17 +843,6 @@
  * https://github.com/bakkeby/patches/wiki/netclientliststacking/
  */
 #define NET_CLIENT_LIST_STACKING_PATCH 0
-
-/* Removes the border when there is only one window visible.
- * https://dwm.suckless.org/patches/noborder/
- */
-#define NOBORDER_PATCH 0
-
-/* Enable modifying or removing dmenu in config.def.h which resulted previously in a
- * compilation error because two lines of code hardcode dmenu into dwm.
- * https://dwm.suckless.org/patches/nodmenu/
- */
-#define NODMENU_PATCH 0
 
 /* This patch allows for toggleable client button bindings that have no modifiers.
  * This can, for example, allow you to move or resize using the mouse alone without holding
@@ -1482,13 +1474,3 @@
  * https://dwm.suckless.org/patches/nrowgrid/
  */
 #define NROWGRID_LAYOUT 0
-
-/* The default tile layout.
- * This can be optionally disabled in favour of other layouts.
- */
-#define TILE_LAYOUT 1
-
-/* Monocle layout (default).
- * This can be optionally disabled in favour of other layouts.
- */
-#define MONOCLE_LAYOUT 1
