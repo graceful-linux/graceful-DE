@@ -40,6 +40,7 @@ target_compile_definitions(graceful-compton PRIVATE
         -DCONFIG_XRC
         -DCONFIG_DBUS
         -DCONFIG_XSYNC
+        -DCONFIG_GLX_SYNC
         -DCONFIG_XINERAMA
         -DCONFIG_VSYNC_DRM
         -DCONFIG_LIBCONFIG

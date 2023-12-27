@@ -6938,16 +6938,9 @@ cxinerama_upd_scrs(session_t *ps) {
 #endif
 }
 
-/**
- * Initialize a session.
- *
- * @param ps_old old session, from which the function will take the X
- *    connection, then free it
- * @param argc number of commandline arguments
- * @param argv commandline arguments
- */
-static session_t *
-session_init(session_t *ps_old, int argc, char **argv) {
+
+static session_t* session_init(session_t *ps_old, int argc, char **argv)
+{
   const static session_t s_def = {
     .dpy = NULL,
     .scr = 0,
@@ -7658,8 +7651,8 @@ dump_img(session_t *ps) {
  *
  * @param ps current session
  */
-static void
-session_run(session_t *ps) {
+static void session_run(session_t *ps)
+{
   win *t;
 
   if (ps->o.sw_opti)
@@ -7740,11 +7733,9 @@ reset_enable(int __attribute__((unused)) signum) {
   ps->reset = true;
 }
 
-/**
- * The function that everybody knows.
- */
-int
-main(int argc, char **argv) {
+
+int main(int argc, char **argv)
+{
   // Set locale so window names with special characters are interpreted
   // correctly
   setlocale(LC_ALL, "");
