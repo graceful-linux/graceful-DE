@@ -516,7 +516,7 @@ static const MonitorRule monrules[] = {
 #else
 static const MonitorRule monrules[] = {
 	/* monitor  layout  mfact  nmaster  showbar  topbar */
-	{  1,       2,      -1,    -1,      -1,      -1     }, // use a different layout for the second monitor
+	{  -1,      2,      -1,    -1,      -1,      -1     }, // use a different layout for the second monitor
 	{  -1,      0,      -1,    -1,      -1,      -1     }, // default
 };
 #endif // PERTAG_PATCH
@@ -561,7 +561,7 @@ static const BarRule barrules[] = {
 	{ -1,        0,     BAR_ALIGN_LEFT,   width_taggrid,            draw_taggrid,           click_taggrid,           NULL,                    "taggrid" },
 	#endif // BAR_TAGGRID_PATCH
 	#if BAR_SYSTRAY_PATCH
-	{  0,        0,     BAR_ALIGN_RIGHT,  width_systray,            draw_systray,           click_systray,           NULL,                    "systray" },
+	{ -1,        0,     BAR_ALIGN_RIGHT,  width_systray,            draw_systray,           click_systray,           NULL,                    "systray" },
 	#endif // BAR_SYSTRAY_PATCH
 	#if BAR_LTSYMBOL_PATCH
 	{ -1,        0,     BAR_ALIGN_LEFT,   width_ltsymbol,           draw_ltsymbol,          click_ltsymbol,          NULL,                    "layout" },
