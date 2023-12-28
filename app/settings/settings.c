@@ -13,6 +13,13 @@
 #include <gdk/x11/gdkx11screen.h>
 #include <gdk/x11/gdkx11display.h>
 
+
+#include "config.h"
+
+
+#define DPI_FALLBACK        96
+
+
 typedef void (*SettingsTerminateFunc) (void* udata);
 
 typedef struct SettingsColor                SettingsColor;
@@ -79,6 +86,7 @@ G_DEFINE_TYPE (GDSettingsManager, gd_settings_manager, G_TYPE_OBJECT)
 static GQuark gd_settings_error_quark   (void);
 static bool check_settings_is_running   (Display* display, int screen);
 static void init_settings               (GDSettingsManager* manager, Display* display, int screen);
+static void init_settings_value         (GDSettingsManager* manager);
 
 static void terminate_cb                (void* data);
 static void device_added_cb             (GdkSeat* uSeat, GdkDevice* device, GDSettingsManager* manager);
@@ -139,7 +147,8 @@ bool gd_settings_manager_start(GDSettingsManager *manager, GError **error)
     // 初始化 settings
     init_settings (manager, gdk_x11_display_get_xdisplay (dsp), gdk_x11_screen_get_screen_number (screen));
 
-
+    // 初始化 settings value
+    init_settings_value (manager);
 
     return true;
 }
@@ -160,6 +169,58 @@ GDSettingsManager* gd_settings_manager_new(void)
 void gd_settings_manager_stop(GDSettingsManager *manager)
 {
 
+}
+
+void gd_settings_manager_set_int(GDSettingsManager *manager, const char *key, int value)
+{
+    g_return_if_fail(manager && key);
+
+    SettingsSettings* val = g_hash_table_lookup (manager->settings, key);
+    if (!val) {
+        val = g_new0(SettingsSettings, 1);
+        g_assert(val);
+        val->name = g_strdup(key);
+        g_assert(val->name);
+        val->value[1] = NULL;
+    }
+
+    GVariant* valT = val->value[0];
+    if (valT) {
+        int valTT = g_variant_get_int32(valT);
+        if (valTT == value) {
+            return;
+        }
+        g_variant_unref (valT);
+    }
+
+    val->value[0] = g_variant_new_int32(value);
+    val->lastChangeSerial = manager->serial;
+}
+
+void gd_settings_manager_set_string(GDSettingsManager *manager, const char *key, const char* value)
+{
+    g_return_if_fail(manager && key && value);
+
+    SettingsSettings* val = g_hash_table_lookup (manager->settings, key);
+    if (!val) {
+        val = g_new0(SettingsSettings, 1);
+        g_assert(val);
+        val->name = g_strdup(key);
+        g_assert(val->name);
+        val->value[1] = NULL;
+    }
+
+    GVariant* valT = val->value[0];
+    if (valT) {
+        const char* valTT = g_variant_get_type_string (valT);
+        if (0 == g_strcmp0 (valTT, value)) {
+            return;
+        }
+        g_variant_unref (valT);
+    }
+
+    val->value[0] = g_variant_new_string (value);
+    val->lastChangeSerial = manager->serial;
 }
 
 static bool check_settings_is_running (Display* display, int screen)
@@ -274,3 +335,25 @@ static void device_removed_cb (GdkSeat* uSeat, GdkDevice* device, GDSettingsMana
         //
     }
 }
+
+static void init_settings_value (GDSettingsManager* manager)
+{
+    gd_settings_manager_set_string (manager, "Gtk/IMModule", GD_SETTINGS_IM_MODULE);
+
+    gd_settings_manager_set_int (manager, "Xft/Antialias", GD_SETTINGS_FONT_ANTIALIASING);
+    gd_settings_manager_set_int (manager, "Xft/Hinting", GD_SETTINGS_FONT_IS_HINTING);
+    gd_settings_manager_set_string (manager, "Xft/HintStyle", GD_SETTINGS_FONT_HINTING);
+    gd_settings_manager_set_int (manager, "Gdk/WindowScalingFactor", 1);
+    gd_settings_manager_set_string (manager, "Xft/RGBA", GD_SETTINGS_RGBA);
+    gd_settings_manager_set_int (manager, "Gtk/CursorThemeSize", GD_SETTINGS_CURSOR_SIZE);
+    gd_settings_manager_set_string (manager, "Gtk/CursorThemeName", GD_SETTINGS_CURSOR_NAME);
+
+    {
+        double dpi = DPI_FALLBACK * GD_SETTINGS_DPI * 1024;
+        double scaledDPI = dpi * 1024;
+        gd_settings_manager_set_int (manager, "Gdk/UnscaledDPI", (int) dpi);
+        gd_settings_manager_set_int (manager, "Xft/DPI", (int) scaledDPI);
+    }
+
+}
+

@@ -22,6 +22,9 @@ GDSettingsManager*      gd_settings_manager_new             (void);
 bool                    gd_settings_manager_start           (GDSettingsManager* manager, GError** error);
 void                    gd_settings_manager_stop            (GDSettingsManager* manager);
 
+void                    gd_settings_manager_set_int         (GDSettingsManager* manager, const char* key, int value);
+void                    gd_settings_manager_set_string      (GDSettingsManager* manager, const char* key, const char* value);
+
 G_END_DECLS
 
 #endif //GRACEFUL_DE_SETTINGS_H

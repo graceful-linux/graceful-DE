@@ -16,7 +16,7 @@ int main (int argc, char* argv[])
 
     g_autoptr(GError) error = NULL;
 
-    gdk_set_allowed_backends (GDK_BACKEND);
+    gdk_set_allowed_backends ("x11");
     g_unsetenv ("GDK_BACKEND");
 
     if (!gtk_init_with_args (&argc, &argv, "graceful-settings", NULL, NULL, &error)) {
