@@ -113,9 +113,7 @@
 #if CFACTS_PATCH
 #include "cfacts.h"
 #endif
-#if CMDCUSTOMIZE_PATCH
-#include "cmdcustomize.h"
-#endif
+
 #if COOL_AUTOSTART_PATCH
 #include "cool_autostart.h"
 #endif

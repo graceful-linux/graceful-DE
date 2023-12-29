@@ -42,6 +42,7 @@
 #endif /* XINERAMA */
 #include <X11/Xft/Xft.h>
 #include <sys/procfs.h>
+#include <X11/extensions/Xfixes.h>
 
 #include "drw.h"
 #include "util.h"
@@ -3356,8 +3357,7 @@ run(void)
     }
 }
 #else
-void
-run(void)
+void run(void)
 {
     XEvent ev;
     /* main event loop */
@@ -5260,65 +5260,28 @@ zoom(const Arg *arg)
     #endif // ZOOMSWAP_PATCH
 }
 
-int
-main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
-    #if CMDCUSTOMIZE_PATCH
-    for (int i=1;i<argc;i+=1)
-        if (!strcmp("-v", argv[i]))
-            die("graceful-wm-"VERSION);
-        else if (!strcmp("-h", argv[i]) || !strcmp("--help", argv[i]))
-            die(help());
-        else if (!strcmp("-fn", argv[i])) /* font set */
-        #if BAR_PANGO_PATCH
-            strcpy(font, argv[++i]);
-        #else
-            fonts[0] = argv[++i];
-        #endif // BAR_PANGO_PATCH
-        #if !BAR_VTCOLORS_PATCH
-        else if (!strcmp("-nb", argv[i])) /* normal background color */
-            colors[SchemeNorm][1] = argv[++i];
-        else if (!strcmp("-nf", argv[i])) /* normal foreground color */
-            colors[SchemeNorm][0] = argv[++i];
-        else if (!strcmp("-sb", argv[i])) /* selected background color */
-            colors[SchemeSel][1] = argv[++i];
-        else if (!strcmp("-sf", argv[i])) /* selected foreground color */
-            colors[SchemeSel][0] = argv[++i];
-        #endif // !BAR_VTCOLORS_PATCH
-        #if NODMENU_PATCH
-        else if (!strcmp("-df", argv[i])) /* dmenu font */
-            dmenucmd[2] = argv[++i];
-        else if (!strcmp("-dnb", argv[i])) /* dmenu normal background color */
-            dmenucmd[4] = argv[++i];
-        else if (!strcmp("-dnf", argv[i])) /* dmenu normal foreground color */
-            dmenucmd[6] = argv[++i];
-        else if (!strcmp("-dsb", argv[i])) /* dmenu selected background color */
-            dmenucmd[8] = argv[++i];
-        else if (!strcmp("-dsf", argv[i])) /* dmenu selected foreground color */
-            dmenucmd[10] = argv[++i];
-        #else
-        else if (!strcmp("-df", argv[i])) /* dmenu font */
-            dmenucmd[4] = argv[++i];
-        else if (!strcmp("-dnb", argv[i])) /* dmenu normal background color */
-            dmenucmd[6] = argv[++i];
-        else if (!strcmp("-dnf", argv[i])) /* dmenu normal foreground color */
-            dmenucmd[8] = argv[++i];
-        else if (!strcmp("-dsb", argv[i])) /* dmenu selected background color */
-            dmenucmd[10] = argv[++i];
-        else if (!strcmp("-dsf", argv[i])) /* dmenu selected foreground color */
-            dmenucmd[12] = argv[++i];
-        #endif // NODMENU_PATCH
-        else die(help());
-    #else
-    if (argc == 2 && !strcmp("-v", argv[1]))
+    if (argc == 2 && !strcmp("-v", argv[1])) {
         die("graceful-wm-"VERSION);
-    else if (argc != 1)
+    }
+    else if (argc != 1) {
         die("usage: graceful-wm [-v]");
-    #endif // CMDCUSTOMIZE_PATCH
-    if (!setlocale(LC_CTYPE, "") || !XSupportsLocale())
+    }
+
+    if (!setlocale(LC_CTYPE, "") || !XSupportsLocale()) {
         fputs("warning: no locale support\n", stderr);
-    if (!(dpy = XOpenDisplay(NULL)))
+    }
+
+    if (!(dpy = XOpenDisplay(NULL))) {
         die("graceful-wm: cannot open display");
+    }
+
+    {
+        // x fixes
+        XFixesSetClientDisconnectMode (dpy, XFixesClientDisconnectFlagTerminate);
+    }
+
     #if SWALLOW_PATCH
     if (!(xcon = XGetXCBConnection(dpy)))
         die("graceful-wm: cannot get xcb connection\n");

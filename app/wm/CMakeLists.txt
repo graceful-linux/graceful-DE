@@ -13,7 +13,7 @@ target_include_directories(graceful-wm PRIVATE
         ${X_RENDER_INCLUDE_DIRS}
         ${FONT_CONFIG_INCLUDE_DIRS}
 )
-target_link_libraries(graceful-wm
+target_link_libraries(graceful-wm -lXfixes
         ${XFT_LIBRARIES}
         ${X11_LIBRARIES}
         ${YAJL_LIBRARIES}
