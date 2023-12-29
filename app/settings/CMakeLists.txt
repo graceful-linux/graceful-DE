@@ -11,3 +11,5 @@ target_include_directories(graceful-settings PRIVATE
         ${GTK_INCLUDE_DIRS}
         ${GDK_X11_INCLUDE_DIRS}
 )
+
+install(TARGETS graceful-settings   DESTINATION /usr/bin)

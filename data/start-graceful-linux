@@ -61,6 +61,9 @@ fi
 # 启动窗口组合管理器
 start /usr/bin/graceful-compton --config /etc/graceful-linux/compton.conf
 
+# 启动 Gtk 设置
+start /usr/bin/graceful-settings
+
 # 启动终端
 # start_terminator
 

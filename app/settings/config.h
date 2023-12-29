@@ -56,13 +56,14 @@
  */
 #define     GD_SETTINGS_IM_MODULE                   "ibus"                                          // Gtk/IMModule
 #define     GD_SETTINGS_COLOR_SCHEME                "prefer-dark"
-#define     GD_SETTINGS_FONT_ANTIALIASING           1                                               // Xft/Antialias: NONE(0), GrayScale(1), RGBA(1)
-#define     GD_SETTINGS_FONT_IS_HINTING             1                                               // Xft/Hinting: 1 or 0
+#define     GD_SETTINGS_FONT_ANTIALIASING           "1"                                             // Xft/Antialias: NONE(0), GrayScale(1), RGBA(1)
+#define     GD_SETTINGS_FONT_IS_HINTING             "1"                                             // Xft/Hinting: 1 or 0
 #define     GD_SETTINGS_DPI                         1.0                                             // dpi
 #define     GD_SETTINGS_FONT_HINTING                "hintfull"                                      // Xft/HintStyle: hintfull, hintmedium, hintslight, hintnone
 #define     GD_SETTINGS_RGBA                        "rgba"                                          // Xft/RGBA: none, rgba, rgb, bgr, vrgb, vbgr
 #define     GD_SETTINGS_CURSOR_SIZE                 24
 #define     GD_SETTINGS_CURSOR_NAME                 "Bibata-Original-Classic"
+#define     GD_SETTINGS_GTK_THEME                   "Mojave-Dark-solid"
 #define     GD_SETTINGS_FONT_NAME                   "WenQuanYi Micro Hei Mono Bold 13"
 #define     GD_SETTINGS_GTK_THEME                   "Mojave-Dark-solid"
 #define     GD_SETTINGS_ICON_NAME                   "McMojave-circle"
