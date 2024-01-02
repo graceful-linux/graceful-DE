@@ -64,6 +64,9 @@ start /usr/bin/graceful-compton --config /etc/graceful-linux/compton.conf
 # 启动 Gtk 设置
 start /usr/bin/graceful-settings
 
+# 启动锁屏
+start /usr/bin/xscreensaver --no-splash
+
 # 启动终端
 # start_terminator
 

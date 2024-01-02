@@ -38,17 +38,24 @@ pkgver=${versionMajor}.${versionMinor}.${versionPatch}
 pkgrel=${versionTweak}
 pkgdesc='An ultra-lightweight tiled desktop environment.'
 url='https://github.com/graceful-linux/graceful-linux'
-arch=('x86_64')
+arch=('x86_64' 'arm')
 license=('MIT')
 groups=('graceful-linux')
 depends=('libxft' 'libx11' 'yajl' 'libxinerama' 'fontconfig' 'terminator' 'feh' 'ibus' 'ibus-rime' 'libglvnd' 'libxext'
     'libxfixes' 'dbus' 'libdrm' 'libxrandr' 'libxrender' 'pcre' 'libxdamage' 'glib2' 'libconfig' 'libxcomposite'
-    'rofi' 'xdotool'
+    'rofi' 'xdotool' 'xscreensaver' 'lightdm' 'bibata-cursor-theme' 'mcmojave-circle-icon-theme-git' 'mojave-gtk-theme-git'
 )
+optdepends=(
+    'cups: printing support'
+    'sane: scanners support'
+    'libpng: PNG images support'
+    )
 makedepends=('cmake' 'gcc')
 source=("${workDir}/${packageName}")
 
 sha512sums=("${packageMD5}")
+noextract=()
+validpgpkeys=('18B65970A361B77D6C7C67C29EE375D12E7A3EB1')
 
 prepare() {
   mkdir build && cd build 
@@ -68,5 +75,6 @@ package() {
 EOF
 
 cd "${workDir}"
+makepkg --printsrcinfo > .SRCINFO
 makepkg
 cd "${curDir}"
