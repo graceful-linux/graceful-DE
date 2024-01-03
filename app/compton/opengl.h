@@ -67,7 +67,8 @@ glx_check_err_(session_t *ps, const char *func, int line) {
  * Check if a word is in string.
  */
 static inline bool
-wd_is_in_str(const char *haystick, const char *needle) {
+wd_is_in_str(const char *haystick, const char *needle)
+{
   if (!haystick)
     return false;
 

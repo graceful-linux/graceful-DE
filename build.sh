@@ -43,7 +43,8 @@ license=('MIT')
 groups=('graceful-linux')
 depends=('libxft' 'libx11' 'yajl' 'libxinerama' 'fontconfig' 'terminator' 'feh' 'ibus' 'ibus-rime' 'libglvnd' 'libxext'
     'libxfixes' 'dbus' 'libdrm' 'libxrandr' 'libxrender' 'pcre' 'libxdamage' 'glib2' 'libconfig' 'libxcomposite'
-    'rofi' 'xdotool' 'xscreensaver' 'lightdm' 'bibata-cursor-theme' 'mcmojave-circle-icon-theme-git' 'mojave-gtk-theme-git'
+    'rofi' 'xdotool' 'xscreensaver' 'ly' 'bibata-cursor-theme' 'mcmojave-circle-icon-theme-git' 'mojave-gtk-theme-git'
+    'xorg-server' 
 )
 optdepends=(
     'cups: printing support'
