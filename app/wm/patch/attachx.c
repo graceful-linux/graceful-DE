@@ -1,7 +1,7 @@
 void
 attachx(Client *c)
 {
-	#if ATTACHABOVE_PATCH || ATTACHASIDE_PATCH || ATTACHBOTTOM_PATCH || SEAMLESS_RESTART_PATCH
+	#if 1 || ATTACHASIDE_PATCH || ATTACHBOTTOM_PATCH || SEAMLESS_RESTART_PATCH
 	Client *at;
 	#endif // ATTACHABOVE_PATCH | ATTACHASIDE_PATCH | ATTACHBOTTOM_PATCH | SEAMLESS_RESTART_PATCH
 
@@ -21,7 +21,7 @@ attachx(Client *c)
 	}
 	#endif // SEAMLESS_RESTART_PATCH
 
-	#if ATTACHABOVE_PATCH
+#if 1
 	if (!(c->mon->sel == NULL || c->mon->sel == c->mon->clients || c->mon->sel->isfloating)) {
 		for (at = c->mon->clients; at->next != c->mon->sel; at = at->next);
 		c->next = at->next;

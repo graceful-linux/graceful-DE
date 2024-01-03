@@ -35,6 +35,7 @@ pkg_check_modules(CONFIG        REQUIRED libconfig)
 pkg_check_modules(FONT_CONFIG   REQUIRED fontconfig)
 pkg_check_modules(X_COMPOSITE   REQUIRED xcomposite)
 pkg_check_modules(GDK_X11       REQUIRED gdk-x11-3.0)
+pkg_check_modules(PANGO         REQUIRED pango pangoxft)
 
 include(data/data.cmake)
 add_subdirectory(app/wm)

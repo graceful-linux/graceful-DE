@@ -15,9 +15,7 @@
 #if BAR_DWMBLOCKS_PATCH && BAR_STATUSCMD_PATCH
 #include "bar_dwmblocks.c"
 #endif
-#if BAR_EWMHTAGS_PATCH
 #include "bar_ewmhtags.c"
-#endif
 #if COMBO_PATCH
 #include "combo.c"
 #endif
@@ -100,7 +98,7 @@
 #if ASPECTRESIZE_PATCH
 #include "aspectresize.c"
 #endif
-#if ATTACHABOVE_PATCH || ATTACHASIDE_PATCH || ATTACHBELOW_PATCH || ATTACHBOTTOM_PATCH || SEAMLESS_RESTART_PATCH
+#if 1||ATTACHABOVE_PATCH || ATTACHASIDE_PATCH || ATTACHBELOW_PATCH || ATTACHBOTTOM_PATCH || SEAMLESS_RESTART_PATCH
 #include "attachx.c"
 #endif
 #if AUTOSTART_PATCH

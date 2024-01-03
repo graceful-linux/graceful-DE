@@ -136,12 +136,7 @@
 #define BAR_TAGPREVIEW_PATCH 0
 
 /* Show status in bar */
-#define BAR_STATUS_PATCH 1
-
-/* This patch adds a clickable button to the left hand side of the statusbar.
- * https://dwm.suckless.org/patches/statusbutton/
- */
-#define BAR_STATUSBUTTON_PATCH 0 
+#define BAR_STATUS_PATCH 0
 
 /* This patch adds the ability to execute shell commands based on the mouse button and position
  * when clicking the status bar. Refer to the website for usage.
@@ -156,30 +151,6 @@
  */
 #define BAR_STATUS2D_PATCH 0
 
-/* Supplementary patch should you want to disable alpha for the status2d section */
-#define BAR_STATUS2D_NO_ALPHA_PATCH 0
-
-/* Addition to the status2d patch that allows the use of terminal colors (color0 through color15)
- * from xrdb in the status, allowing programs like pywal to change statusbar colors.
- * This adds the C and B codes to use terminal foreground and background colors respectively.
- * E.g. ^B5^ would use color5 as the background color.
- * https://dwm.suckless.org/patches/status2d/
- */
-#define BAR_STATUS2D_XRDB_TERMCOLORS_PATCH 0
-
-/* The systray patch adds systray for the status bar.
- * https://dwm.suckless.org/patches/systray/
- */
-#define BAR_SYSTRAY_PATCH 1
-
-/* Show tag symbols in the bar. */
-#define BAR_TAGS_PATCH 0
-
-/* Show tag symbols + class of master window in the bar.
- * https://dwm.suckless.org/patches/taglabels/
- */
-#define BAR_TAGLABELS_PATCH 0
-
 /* Show window title in bar */
 #define BAR_WINTITLE_PATCH 0
 
@@ -189,7 +160,7 @@
  * with the corresponding hidden patch then these two will overlap unless the width of the
  * modules are controlled.
  */
-#define BAR_WINTITLE_FLOATING_PATCH 0
+#define BAR_WINTITLE_FLOATING_PATCH 1
 
 /* Shows window titles in the bar, but only for floating clients.
  * This depends on code from the flexwintitle patch.
@@ -292,31 +263,10 @@
  */
 #define BAR_EXTRASTATUS_PATCH 0
 
-/* Adds EWMH support for _NET_NUMBER_OF_DESKTOPS, _NET_CURRENT_DESKTOP, _NET_DESKTOP_NAMES
- * and _NET_DESKTOP_VIEWPORT, which allows for compatibility with other bars and programs
- * that request workspace information. For example polybar's xworkspaces module.
- *
- * This patch also includes support for adding the _IS_FLOATING property for floating windows
- * allowing for compositors to treat floating windows differently to tiled windows.
- *
- * E.g. this setting makes picom only render shadows for floating windows:
- *
- *     shadow-exclude = [ "! _IS_FLOATING@:32c = 1" ];
- *
- * https://github.com/bakkeby/dwm-flexipatch/issues/50 (_IS_FLOATING patch)
- * https://dwm.suckless.org/patches/ewmhtags/
- */
-#define BAR_EWMHTAGS_PATCH 0
-
-/* Allows the bar height to be explicitly set rather than being derived from font.
- * https://dwm.suckless.org/patches/bar_height/
- */
-#define BAR_HEIGHT_PATCH 0
-
 /* This patch prevents dwm from drawing tags with no clients (i.e. vacant) on the bar.
  * https://dwm.suckless.org/patches/hide_vacant_tags/
  */
-#define BAR_HIDEVACANTTAGS_PATCH 0
+#define BAR_HIDEVACANTTAGS_PATCH 1
 
 /* With this patch dwm's built-in status bar is only shown when HOLDKEY is pressed
  * and the bar will now overlay the display.
@@ -335,7 +285,7 @@
  * glyphs are used. This is for systems that do not have an updated version of the Xft library
  * (or generally prefer monochrome fonts).
  */
-#define BAR_NO_COLOR_EMOJI_PATCH 0
+#define BAR_NO_COLOR_EMOJI_PATCH 1
 
 /* This patch adds vertical and horizontal space between the statusbar and the edge of the screen.
  * https://dwm.suckless.org/patches/barpadding/
@@ -368,7 +318,7 @@
  * https://lists.suckless.org/hackers/2004/17285.html
  * https://dwm.suckless.org/patches/pango/
  */
-#define BAR_PANGO_PATCH 0
+#define BAR_PANGO_PATCH 1
 
 /* This patch allows the status text to be fixed to the bar on a specific
  * monitor rather than being drawn on the focused monitor.
@@ -433,14 +383,14 @@
 /* This patch allows windows to be resized with its aspect ratio remaining constant.
  * https://dwm.suckless.org/patches/aspectresize/
  */
-#define ASPECTRESIZE_PATCH 0
+#define ASPECTRESIZE_PATCH 1
 
 /* This patch adds new clients above the selected client, instead of always
  * becoming the new master. This behaviour is known from Xmonad.
  * This patch takes precedence over ATTACHASIDE_PATCH.
  * https://dwm.suckless.org/patches/attachabove/
  */
-#define ATTACHABOVE_PATCH 0
+#define ATTACHABOVE_PATCH 1
 
 /* This patch adds new clients on top of the stack.
  * This patch takes precedence over ATTACHBELOW_PATCH.

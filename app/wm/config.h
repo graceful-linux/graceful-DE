@@ -56,9 +56,7 @@ enum showtab_modes { showtab_never, showtab_auto, showtab_nmodes, showtab_always
 static const int showtab                 = showtab_auto;        /* Default tab bar show mode */
 static const int toptab                  = False;               /* False means bottom tab bar */
 #endif // TAB_PATCH
-#if BAR_HEIGHT_PATCH
-static const int bar_height              = 0;   /* 0 means derive from font, >= 1 explicit height */
-#endif // BAR_HEIGHT_PATCH
+static const int bar_height              = 32;  /* 0 means derive from font, >= 1 explicit height */
 #if BAR_PADDING_PATCH
 static const int vertpad                 = 10;  /* vertical padding of bar */
 static const int sidepad                 = 10;  /* horizontal padding of bar */
@@ -92,16 +90,8 @@ static const int statusmon               = 'A';
 static const int horizpadbar             = 2;   /* horizontal padding for statusbar */
 static const int vertpadbar              = 0;   /* vertical padding for statusbar */
 #endif // BAR_STATUSPADDING_PATCH
-#if BAR_STATUSBUTTON_PATCH
-static const char buttonbar[]            = "<O>";
-#endif // BAR_STATUSBUTTON_PATCH
 static const unsigned int systrayspacing = 2;   /* systray spacing */
 static const int showsystray             = 1;   /* 0 means no systray */
-#if BAR_TAGLABELS_PATCH
-static const char ptagf[] = "[%s %s]";          /* format of a tag label */
-static const char etagf[] = "[%s]";             /* format of an empty tag */
-static const int lcaselbl = 0;                  /* 1 means make tag label lowercase */
-#endif // BAR_TAGLABELS_PATCH
 static const unsigned int ulinepad = 5;         /* horizontal padding between the underline and tag */
 static const unsigned int ulinestroke  = 2;     /* thickness / height of the underline */
 static const unsigned int ulinevoffset = 0;     /* how far above the bottom of the bar the line should appear */
@@ -154,11 +144,7 @@ static void (*bartabmonfns[])(Monitor *) = { monocle /* , customlayoutfn */ };
 static void (*bartabmonfns[])(Monitor *) = { NULL /* , customlayoutfn */ };
 #endif // MONOCLE_LAYOUT
 #endif // BAR_TABGROUPS_PATCH
-#if BAR_PANGO_PATCH
 static const char font[]                 = "monospace 10";
-#else
-static const char *fonts[]               = { "monospace:size=10" };
-#endif // BAR_PANGO_PATCH
 
 static char c000000[]                    = "#000000"; // placeholder value
 
@@ -305,7 +291,6 @@ static const unsigned int alphas[][3] = {
 	#endif // BAR_FLEXWINTITLE_PATCH
 };
 #endif // BAR_ALPHA_PATCH
-#if BAR_VTCOLORS_PATCH
 static const char title_bg_dark[]   = "#303030";
 static const char title_bg_light[]  = "#fdfdfd";
 static const int color_ptrs[][ColCount] = {
@@ -320,7 +305,6 @@ static const int color_ptrs[][ColCount] = {
 	[SchemeHidSel]       = { 6,      -1,     -1,     -1 },
 	[SchemeUrg]          = { 7,      9,      9,      15 },
 };
-#endif // BAR_VTCOLORS_PATCH
 
 static char *colors[][ColCount] = {
 	/*                       fg                bg                border                float */
@@ -539,22 +523,13 @@ static const Inset default_inset = {
  */
 static const BarRule barrules[] = {
 	/* monitor   bar    alignment         widthfunc                 drawfunc                clickfunc                hoverfunc                name */
-	#if BAR_STATUSBUTTON_PATCH
-	{ -1,        0,     BAR_ALIGN_LEFT,   width_stbutton,           draw_stbutton,          click_stbutton,          NULL,                    "statusbutton" },
-	#endif // BAR_STATUSBUTTON_PATCH
 	#if BAR_POWERLINE_TAGS_PATCH
 	{ -1,        0,     BAR_ALIGN_LEFT,   width_pwrl_tags,          draw_pwrl_tags,         click_pwrl_tags,         hover_pwrl_tags,         "powerline_tags" },
 	#endif // BAR_POWERLINE_TAGS_PATCH
-	#if BAR_TAGS_PATCH
-	{ -1,        0,     BAR_ALIGN_LEFT,   width_tags,               draw_tags,              click_tags,              hover_tags,              "tags" },
-	#endif // BAR_TAGS_PATCH
-	#if BAR_TAGLABELS_PATCH
-	{ -1,        0,     BAR_ALIGN_LEFT,   width_taglabels,          draw_taglabels,         click_taglabels,         hover_taglabels,         "taglabels" },
-	#endif // BAR_TAGLABELS_PATCH
 	#if BAR_TAGGRID_PATCH
 	{ -1,        0,     BAR_ALIGN_LEFT,   width_taggrid,            draw_taggrid,           click_taggrid,           NULL,                    "taggrid" },
 	#endif // BAR_TAGGRID_PATCH
-	{ 1,         0,     BAR_ALIGN_RIGHT,  width_systray,            draw_systray,           click_systray,           NULL,                    "systray" },
+	{ 0,         0,     BAR_ALIGN_RIGHT,  width_systray,            draw_systray,           click_systray,           NULL,                    "systray" },
 	#if BAR_LTSYMBOL_PATCH
 	{ -1,        0,     BAR_ALIGN_LEFT,   width_ltsymbol,           draw_ltsymbol,          click_ltsymbol,          NULL,                    "layout" },
 	#endif // BAR_LTSYMBOL_PATCH
@@ -1034,9 +1009,6 @@ static const Key keys[] = {
 	#if WINVIEW_PATCH
 	{ MODKEY,                       XK_o,          winview,                {0} },
 	#endif // WINVIEW_PATCH
-	#if XRDB_PATCH && !BAR_VTCOLORS_PATCH
-	{ MODKEY|ShiftMask,             XK_F5,         xrdb,                   {.v = NULL } },
-	#endif // XRDB_PATCH
 	{ MODKEY,                       XK_m,          setlayout,              {.v = &layouts[0]} },
 	{ MODKEY,                       XK_t,          setlayout,              {.v = &layouts[1]} },
 	#if COLUMNS_LAYOUT

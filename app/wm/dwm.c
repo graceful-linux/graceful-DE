@@ -56,9 +56,7 @@
 #endif
 #endif
 
-#if BAR_PANGO_PATCH
 #include <pango/pango.h>
-#endif // BAR_PANGO_PATCH
 
 #if RESTARTSIG_PATCH
 #include <poll.h>
@@ -201,9 +199,7 @@ enum {
     NetWMIcon,
     NetSystemTray, NetSystemTrayOP, NetSystemTrayOrientation,
     NetSystemTrayVisual, NetWMWindowTypeDock, NetSystemTrayOrientationHorz,
-    #if BAR_EWMHTAGS_PATCH
     NetDesktopNames, NetDesktopViewport, NetNumberOfDesktops, NetCurrentDesktop,
-    #endif // BAR_EWMHTAGS_PATCH
     NetClientList,
     #if NET_CLIENT_LIST_STACKING_PATCH
     NetClientListStacking,
@@ -231,9 +227,6 @@ enum {
 #endif // SEAMLESS_RESTART_PATCH
 
 enum {
-    #if BAR_STATUSBUTTON_PATCH
-    ClkButton,
-    #endif // BAR_STATUSBUTTON_PATCH
     #if TAB_PATCH
     ClkTabBar,
     #endif // TAB_PATCH
@@ -518,9 +511,6 @@ struct Monitor {
     #if INSETS_PATCH
     Inset inset;
     #endif // INSETS_PATCH
-    #if BAR_TAGLABELS_PATCH
-    char taglabel[NUMTAGS][64];
-    #endif // BAR_TAGLABELS_PATCH
     #if IPC_PATCH
     char lastltsymbol[16];
     TagState tagstate;
@@ -747,7 +737,7 @@ const char*             gLogPath = "/tmp/graceful-wm.log";
 
 /* variables */
 static const char broken[] = "broken";
-#if BAR_PANGO_PATCH || BAR_STATUS2D_PATCH && !BAR_STATUSCOLORS_PATCH
+#if BAR_STATUS2D_PATCH && !BAR_STATUSCOLORS_PATCH
 static char stext[1024];
 #else
 static char stext[512];
@@ -2646,7 +2636,7 @@ void manage(Window w, XWindowAttributes *wa)
         XRaiseWindow(dpy, c->win);
         XSetWindowBorder(dpy, w, scheme[SchemeNorm][ColFloat].pixel);
     }
-    #if ATTACHABOVE_PATCH || ATTACHASIDE_PATCH || ATTACHBELOW_PATCH || ATTACHBOTTOM_PATCH || SEAMLESS_RESTART_PATCH
+    #if 1||ATTACHASIDE_PATCH || ATTACHBELOW_PATCH || ATTACHBOTTOM_PATCH || SEAMLESS_RESTART_PATCH
     attachx(c);
     #else
     attach(c);
@@ -2709,10 +2699,7 @@ void manage(Window w, XWindowAttributes *wa)
     #endif // BAR_WINTITLEACTIONS_PATCH
     #endif // SWALLOW_PATCH
     focus(NULL);
-
-    #if BAR_EWMHTAGS_PATCH
     setfloatinghint(c);
-    #endif // BAR_EWMHTAGS_PATCH
 }
 
 void mappingnotify(XEvent *e)
@@ -3423,7 +3410,7 @@ sendmon(Client *c, Monitor *m)
     c->sfy = m->my + (m->mh - c->sfh - 2 * c->bw) / 2;
     #endif // SAVEFLOATS_PATCH
     #endif // SENDMON_CENTER_PATCH
-    #if ATTACHABOVE_PATCH || ATTACHASIDE_PATCH || ATTACHBELOW_PATCH || ATTACHBOTTOM_PATCH
+    #if 1||ATTACHASIDE_PATCH || ATTACHBELOW_PATCH || ATTACHBOTTOM_PATCH
     attachx(c);
     #else
     attach(c);
@@ -3766,12 +3753,10 @@ void setup(void)
     #else
     drw = drw_create(dpy, screen, root, sw, sh);
     #endif // BAR_ALPHA_PATCH
-    #if BAR_PANGO_PATCH
-    if (!drw_font_create(drw, font))
-    #else
-    if (!drw_fontset_create(drw, fonts, LENGTH(fonts)))
-    #endif // BAR_PANGO_PATCH
+    if (!drw_font_create(drw, font)) {
         die("no fonts could be loaded.");
+    }
+
     #if BAR_STATUSPADDING_PATCH
     lrpad = drw->fonts->h + horizpadbar;
     bh = drw->fonts->h + vertpadbar;
@@ -3815,12 +3800,10 @@ void setup(void)
     xatom[Manager] = XInternAtom(dpy, "MANAGER", False);
     xatom[Xembed] = XInternAtom(dpy, "_XEMBED", False);
     xatom[XembedInfo] = XInternAtom(dpy, "_XEMBED_INFO", False);
-    #if BAR_EWMHTAGS_PATCH
     netatom[NetDesktopViewport] = XInternAtom(dpy, "_NET_DESKTOP_VIEWPORT", False);
     netatom[NetNumberOfDesktops] = XInternAtom(dpy, "_NET_NUMBER_OF_DESKTOPS", False);
     netatom[NetCurrentDesktop] = XInternAtom(dpy, "_NET_CURRENT_DESKTOP", False);
     netatom[NetDesktopNames] = XInternAtom(dpy, "_NET_DESKTOP_NAMES", False);
-    #endif // BAR_EWMHTAGS_PATCH
     netatom[NetWMIcon] = XInternAtom(dpy, "_NET_WM_ICON", False);
     netatom[NetWMName] = XInternAtom(dpy, "_NET_WM_NAME", False);
     netatom[NetWMState] = XInternAtom(dpy, "_NET_WM_STATE", False);
@@ -3852,7 +3835,6 @@ void setup(void)
     #endif // DRAGCFACT_PATCH
     cursor[CurMove] = drw_cur_create(drw, XC_fleur);
     /* init appearance */
-    #if BAR_VTCOLORS_PATCH
     get_vt_colors();
     if (get_luminance(colors[SchemeTagsNorm][ColBg]) > 50) {
         strcpy(colors[SchemeTitleNorm][ColBg], title_bg_light);
@@ -3861,7 +3843,6 @@ void setup(void)
         strcpy(colors[SchemeTitleNorm][ColBg], title_bg_dark);
         strcpy(colors[SchemeTitleSel][ColBg], title_bg_dark);
     }
-    #endif // BAR_VTCOLORS_PATCH
     #if BAR_STATUS2D_PATCH && !BAR_STATUSCOLORS_PATCH
     scheme = ecalloc(LENGTH(colors) + 1, sizeof(Clr *));
     #if BAR_ALPHA_PATCH
@@ -3907,12 +3888,10 @@ void setup(void)
     /* EWMH support per view */
     XChangeProperty(dpy, root, netatom[NetSupported], XA_ATOM, 32,
         PropModeReplace, (unsigned char *) netatom, NetLast);
-    #if BAR_EWMHTAGS_PATCH
     setnumdesktops();
     setcurrentdesktop();
     setdesktopnames();
     setviewport();
-    #endif // BAR_EWMHTAGS_PATCH
     XDeleteProperty(dpy, root, netatom[NetClientList]);
     #if NET_CLIENT_LIST_STACKING_PATCH
     XDeleteProperty(dpy, root, netatom[NetClientListStacking]);
@@ -4274,10 +4253,7 @@ togglefloating(const Arg *arg)
     #endif // SAVEFLOATS_PATCH / EXRESIZE_PATCH
     }
     arrange(c->mon);
-
-    #if BAR_EWMHTAGS_PATCH
     setfloatinghint(c);
-    #endif // BAR_EWMHTAGS_PATCH
 }
 
 void
@@ -4301,9 +4277,7 @@ toggletag(const Arg *arg)
                 selmon->pertag->prevclient[tagindex] = NULL;
         #endif // SWAPFOCUS_PATCH
     }
-    #if BAR_EWMHTAGS_PATCH
     updatecurrentdesktop();
-    #endif // BAR_EWMHTAGS_PATCH
 }
 
 void
@@ -4404,9 +4378,7 @@ toggleview(const Arg *arg)
     }
     #endif // EMPTYVIEW_PATCH
     #endif // TAGSYNC_PATCH
-    #if BAR_EWMHTAGS_PATCH
     updatecurrentdesktop();
-    #endif // BAR_EWMHTAGS_PATCH
 }
 
 void
@@ -5029,9 +5001,7 @@ view(const Arg *arg)
     arrange(selmon);
     #endif // TAGSYNC_PATCH
     focus(NULL);
-    #if BAR_EWMHTAGS_PATCH
     updatecurrentdesktop();
-    #endif // BAR_EWMHTAGS_PATCH
 }
 
 Client* win_to_client(Window w)
@@ -5238,10 +5208,7 @@ int main(int argc, char *argv[])
         die("graceful-wm: cannot get xcb connection\n");
     #endif // SWALLOW_PATCH
     check_other_wm();
-    #if XRDB_PATCH && !BAR_VTCOLORS_PATCH
-    XrmInitialize();
-    loadxrdb();
-    #endif // XRDB_PATCH && !BAR_VTCOLORS_PATCH
+
     #if COOL_AUTOSTART_PATCH
     autostart_exec();
     #endif // COOL_AUTOSTART_PATCH

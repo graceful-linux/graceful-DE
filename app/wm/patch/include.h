@@ -15,9 +15,7 @@
 #if BAR_DWMBLOCKS_PATCH && BAR_STATUSCMD_PATCH
 #include "bar_dwmblocks.h"
 #endif
-#if BAR_EWMHTAGS_PATCH
 #include "bar_ewmhtags.h"
-#endif
 #if COMBO_PATCH
 #include "combo.h"
 #endif
@@ -39,9 +37,7 @@
 #if BAR_STATUS2D_PATCH
 #include "bar_status2d.h"
 #endif
-#if BAR_STATUSBUTTON_PATCH
-#include "bar_statusbutton.h"
-#endif
+
 #if BAR_STATUSCMD_PATCH
 #include "bar_statuscmd.h"
 #endif
@@ -51,12 +47,6 @@
 #include "bar_winicon.h"
 #if BAR_TABGROUPS_PATCH
 #include "bar_tabgroups.h"
-#endif
-#if BAR_TAGS_PATCH
-#include "bar_tags.h"
-#endif
-#if BAR_TAGLABELS_PATCH
-#include "bar_taglabels.h"
 #endif
 #if BAR_TAGPREVIEW_PATCH
 #include "bar_tagpreview.h"
@@ -83,9 +73,7 @@
 #include "bar_awesomebar.h"
 #endif
 #include "bar_systray.h"
-#if BAR_VTCOLORS_PATCH
 #include "bar_vtcolors.h"
-#endif
 #if BAR_WINTITLEACTIONS_PATCH
 #include "bar_wintitleactions.h"
 #endif
@@ -100,7 +88,7 @@
 #if ASPECTRESIZE_PATCH
 #include "aspectresize.h"
 #endif
-#if ATTACHABOVE_PATCH || ATTACHASIDE_PATCH || ATTACHBELOW_PATCH || ATTACHBOTTOM_PATCH || SEAMLESS_RESTART_PATCH
+#if 1 || ATTACHASIDE_PATCH || ATTACHBELOW_PATCH || ATTACHBOTTOM_PATCH || SEAMLESS_RESTART_PATCH
 #include "attachx.h"
 #endif
 #if AUTOSTART_PATCH
@@ -336,9 +324,7 @@
 #if XKB_PATCH
 #include "xkb.h"
 #endif
-#if XRDB_PATCH && !BAR_VTCOLORS_PATCH
-#include "xrdb.h"
-#endif
+
 /* Layouts */
 #if BSTACK_LAYOUT
 #include "layout_bstack.h"
