@@ -63,10 +63,8 @@ static const int bar_height              = 0;   /* 0 means derive from font, >= 
 static const int vertpad                 = 10;  /* vertical padding of bar */
 static const int sidepad                 = 10;  /* horizontal padding of bar */
 #endif // BAR_PADDING_PATCH
-#if BAR_WINICON_PATCH
-#define ICONSIZE 20    /* icon size */
-#define ICONSPACING 5  /* space between icon and title */
-#endif // BAR_WINICON_PATCH
+#define ICONSIZE 18    /* icon size */
+#define ICONSPACING 3  /* space between icon and title */
 #if FOCUSONCLICK_PATCH
 static const int focusonwheel            = 0;
 #endif // FOCUSONCLICK_PATCH
@@ -97,21 +95,17 @@ static const int vertpadbar              = 0;   /* vertical padding for statusba
 #if BAR_STATUSBUTTON_PATCH
 static const char buttonbar[]            = "<O>";
 #endif // BAR_STATUSBUTTON_PATCH
-#if BAR_SYSTRAY_PATCH
 static const unsigned int systrayspacing = 2;   /* systray spacing */
 static const int showsystray             = 1;   /* 0 means no systray */
-#endif // BAR_SYSTRAY_PATCH
 #if BAR_TAGLABELS_PATCH
 static const char ptagf[] = "[%s %s]";          /* format of a tag label */
 static const char etagf[] = "[%s]";             /* format of an empty tag */
 static const int lcaselbl = 0;                  /* 1 means make tag label lowercase */
 #endif // BAR_TAGLABELS_PATCH
-#if BAR_UNDERLINETAGS_PATCH
 static const unsigned int ulinepad = 5;         /* horizontal padding between the underline and tag */
 static const unsigned int ulinestroke  = 2;     /* thickness / height of the underline */
 static const unsigned int ulinevoffset = 0;     /* how far above the bottom of the bar the line should appear */
 static const int ulineall = 0;                  /* 1 to show underline on all tags, 0 for just the active ones */
-#endif // BAR_UNDERLINETAGS_PATCH
 
 #if NAMETAG_PATCH
 #if NAMETAG_PREPEND_PATCH
@@ -560,9 +554,7 @@ static const BarRule barrules[] = {
 	#if BAR_TAGGRID_PATCH
 	{ -1,        0,     BAR_ALIGN_LEFT,   width_taggrid,            draw_taggrid,           click_taggrid,           NULL,                    "taggrid" },
 	#endif // BAR_TAGGRID_PATCH
-	#if BAR_SYSTRAY_PATCH
-	{ -1,        0,     BAR_ALIGN_RIGHT,  width_systray,            draw_systray,           click_systray,           NULL,                    "systray" },
-	#endif // BAR_SYSTRAY_PATCH
+	{ 1,         0,     BAR_ALIGN_RIGHT,  width_systray,            draw_systray,           click_systray,           NULL,                    "systray" },
 	#if BAR_LTSYMBOL_PATCH
 	{ -1,        0,     BAR_ALIGN_LEFT,   width_ltsymbol,           draw_ltsymbol,          click_ltsymbol,          NULL,                    "layout" },
 	#endif // BAR_LTSYMBOL_PATCH
@@ -882,7 +874,7 @@ static const Key keys[] = {
 	{ MODKEY|ControlMask,           XK_Return,     riospawn,               {.v = termcmd } },
 	{ MODKEY,                       XK_s,          rioresize,              {0} },
 	#endif // RIODRAW_PATCH
-	{ MODKEY,                       XK_b,          togglebar,              {0} },
+	{ MODKEY,                       XK_b,          toggle_bar,             {0} },
 	#if TOGGLETOPBAR_PATCH
 	{ MODKEY|ShiftMask,             XK_b,          toggletopbar,           {0} },
 	#endif // TOGGLETOPBAR_PATCH

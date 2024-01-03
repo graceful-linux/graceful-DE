@@ -10,9 +10,15 @@
 static gboolean handle_sigterm(gpointer udata);
 
 
+const char*             gLogPath = "/tmp/graceful-settings.log";
+
+
 int main (int argc, char* argv[])
 {
     setlocale(LC_ALL, "");
+
+    g_log_set_writer_func (log_handler, NULL, NULL);
+    LOG_INFO(APP_NAME " start...")
 
     g_autoptr(GError) error = NULL;
 
@@ -44,6 +50,8 @@ int main (int argc, char* argv[])
     gtk_main ();
 
     gd_settings_manager_stop (gds);
+
+    LOG_INFO(APP_NAME " stop!")
 
     return 0;
 }

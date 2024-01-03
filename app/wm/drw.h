@@ -26,22 +26,21 @@ enum { ColFg, ColBg, ColBorder, ColFloat, ColCount }; /* Clr scheme index */
 typedef XftColor Clr;
 
 typedef struct {
-	unsigned int w, h;
-	Display *dpy;
-	int screen;
-	Window root;
-	#if BAR_ALPHA_PATCH
-	Visual *visual;
-	unsigned int depth;
-	Colormap cmap;
-	#endif // BAR_ALPHA_PATCH
-	Drawable drawable;
-	#if BAR_WINICON_PATCH
-	Picture picture;
-	#endif // BAR_WINICON_PATCH
-	GC gc;
-	Clr *scheme;
-	Fnt *fonts;
+    unsigned int w, h;
+    Display *dpy;
+    int screen;
+    Window root;
+
+#if BAR_ALPHA_PATCH
+    Visual *visual;
+    unsigned int depth;
+    Colormap cmap;
+#endif // BAR_ALPHA_PATCH
+    Drawable drawable;
+    Picture picture;
+    GC gc;
+    Clr *scheme;
+    Fnt *fonts;
 } Drw;
 
 /* Drawable abstraction */

@@ -1,7 +1,8 @@
 project(graceful-wm C)
 
+include(${CMAKE_SOURCE_DIR}/app/common/common.cmake)
 
-add_executable(graceful-wm drw.c dwm.c util.c)
+add_executable(graceful-wm drw.c dwm.c util.c ${COMMON_SRC})
 target_include_directories(graceful-wm PRIVATE
         ${XFT_INCLUDE_DIRS}
         ${X11_INCLUDE_DIRS}
@@ -26,16 +27,17 @@ target_link_libraries(graceful-wm -lXfixes
 )
 target_compile_definitions(graceful-wm PRIVATE
         -DXINERAMA
+        -DAPP_NAME=\"graceful-wm\"
 )
 
 
-add_executable(graceful-wm-msg patch/ipc/dwm-msg.c)
-target_include_directories(graceful-wm-msg PRIVATE
-        ${YAJL_INCLUDE_DIRS}
-)
-target_link_libraries(graceful-wm-msg
-        ${YAJL_LIBRARIES}
-)
+#add_executable(graceful-wm-msg patch/ipc/dwm-msg.c)
+#target_include_directories(graceful-wm-msg PRIVATE
+#        ${YAJL_INCLUDE_DIRS}
+#)
+#target_link_libraries(graceful-wm-msg
+#        ${YAJL_LIBRARIES}
+#)
 
 install(TARGETS graceful-wm         DESTINATION /usr/bin)
-install(TARGETS graceful-wm-msg     DESTINATION /usr/bin)
+#install(TARGETS graceful-wm-msg     DESTINATION /usr/bin)

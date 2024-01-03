@@ -1,6 +1,8 @@
 project(graceful-compton C)
 
-add_executable(graceful-compton compton.c c2.c dbus.c opengl.c xrescheck.c)
+include(${CMAKE_SOURCE_DIR}/app/common/common.cmake)
+
+add_executable(graceful-compton compton.c c2.c dbus.c opengl.c xrescheck.c ${COMMON_SRC})
 target_include_directories(graceful-compton PRIVATE
         ${GL_INCLUDE_DIRS}
         ${XFT_INCLUDE_DIRS}
@@ -50,6 +52,7 @@ target_compile_definitions(graceful-compton PRIVATE
         -DCONFIG_VSYNC_OPENGL_FBO
         -DCONFIG_VSYNC_OPENGL_VBO
         -DCONFIG_VSYNC_OPENGL_GLSL
+        -DAPP_NAME=\"graceful-compton\"
 )
 
 

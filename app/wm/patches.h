@@ -67,7 +67,7 @@
  * taps into the many layout options that flextile-deluxe offers to produce a window
  * title section in the bar that is representative of what is shown on screen.
  */
-#define BAR_FLEXWINTITLE_PATCH 0
+#define BAR_FLEXWINTITLE_PATCH 1
 
 /* This patch adds a context menu for layout switching.
  *   - xmenu needs to be installed.
@@ -179,29 +179,6 @@
  * https://dwm.suckless.org/patches/taglabels/
  */
 #define BAR_TAGLABELS_PATCH 0
-
-/* This patch underlines the selected tag, or optionally all tags.
- * https://dwm.suckless.org/patches/underlinetags/
- */
-#define BAR_UNDERLINETAGS_PATCH 1
-
-/* This patch adds the window icon next to the window title in the bar.
- *
- * The patch depends on Imlib2 for icon scaling.
- * You need to uncomment the corresponding line in config.mk to use the -lImlib2 library
- *
- * Arch Linux:
- *     sudo pacman -S imlib2
- * Debian:
- *     sudo apt install libimlib2-dev
- *
- * The author recommends adding the compiler flags of -O3 and -march=native to enable auto loop
- * vectorize for better performance.
- *
- * https://github.com/AdamYuan/dwm-winicon
- * https://dwm.suckless.org/patches/winicon
- */
-#define BAR_WINICON_PATCH 1
 
 /* Show window title in bar */
 #define BAR_WINTITLE_PATCH 0

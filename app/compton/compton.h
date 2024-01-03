@@ -10,12 +10,12 @@
 #include "common.h"
 
 #include <math.h>
-#include <sys/select.h>
 #include <limits.h>
 #include <unistd.h>
 #include <getopt.h>
 #include <locale.h>
 #include <signal.h>
+#include <sys/select.h>
 
 #ifdef CONFIG_VSYNC_DRM
 #include <fcntl.h>

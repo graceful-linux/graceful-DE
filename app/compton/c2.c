@@ -421,10 +421,12 @@ c2_parse_target(session_t *ps, const char *pattern, int offset, c2_ptr_t *presul
 
     // Write format
     if (hasformat) {
-      if (pleaf->predef)
-        printf_errf("(): Warning: Format \"%d\" specified on a default target will be ignored.", format);
-      else if (C2_L_TSTRING == pleaf->type)
-        printf_errf("(): Warning: Format \"%d\" specified on a string target will be ignored.", format);
+      if (pleaf->predef) {
+          printf_errf("(): Warning: Format \"%d\" specified on a default target will be ignored.", format);
+      }
+      else if (C2_L_TSTRING == pleaf->type) {
+          printf_errf("(): Warning: Format \"%d\" specified on a string target will be ignored.", format);
+      }
       else {
         if (pleaf->format && pleaf->format != format)
           printf_err("Warning: Default format %d overridden on target.",

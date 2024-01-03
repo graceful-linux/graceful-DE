@@ -12,6 +12,8 @@
 
 #include <gtk/gtk.h>
 
+#include "log.h"
+
 G_BEGIN_DECLS
 
 #define GD_TYPE_SETTINGS_MANAGER            (gd_settings_manager_get_type())

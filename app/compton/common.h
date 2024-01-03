@@ -82,26 +82,26 @@
 // For some special functions
 #define _GNU_SOURCE
 
-#include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <inttypes.h>
-#include <sys/poll.h>
-#include <assert.h>
 #include <time.h>
 #include <ctype.h>
+#include <stdio.h>
+#include <assert.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
+#include <inttypes.h>
+#include <sys/poll.h>
 #include <sys/time.h>
 
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <X11/Xatom.h>
-#include <X11/extensions/Xcomposite.h>
-#include <X11/extensions/Xdamage.h>
-#include <X11/extensions/Xrender.h>
+#include <X11/extensions/Xdbe.h>
 #include <X11/extensions/shape.h>
 #include <X11/extensions/Xrandr.h>
-#include <X11/extensions/Xdbe.h>
+#include <X11/extensions/Xdamage.h>
+#include <X11/extensions/Xrender.h>
+#include <X11/extensions/Xcomposite.h>
 #ifdef CONFIG_XSYNC
 #include <X11/extensions/sync.h>
 #endif
@@ -148,6 +148,8 @@
 
 #endif
 
+#include "log.h"
+
 // === Macros ===
 
 #define MSTR_(s)        #s
@@ -161,27 +163,25 @@
 
 /// Print out an error message.
 #define printf_err(format, ...) \
-  fprintf(stderr, format "\n", ## __VA_ARGS__)
+    LOG_WARNING(format, ## __VA_ARGS__)
 
 /// Print out an error message with function name.
 #define printf_errf(format, ...) \
-  printf_err("%s" format,  __func__, ## __VA_ARGS__)
+    LOG_WARNING(format, ## __VA_ARGS__)
 
 /// Print out an error message with function name, and quit with a
 /// specific exit code.
 #define printf_errfq(code, format, ...) { \
-  printf_err("%s" format,  __func__, ## __VA_ARGS__); \
-  exit(code); \
+    LOG_DIE(format, ## __VA_ARGS__); \
 }
 
 /// Print out a debug message.
 #define printf_dbg(format, ...) \
-  printf(format, ## __VA_ARGS__); \
-  fflush(stdout)
+    LOG_DEBUG(format, ## __VA_ARGS__); \
 
 /// Print out a debug message with function name.
 #define printf_dbgf(format, ...) \
-  printf_dbg("%s" format, __func__, ## __VA_ARGS__)
+    LOG_DEBUG(format, ## __VA_ARGS__)
 
 // Use #s here to prevent macro expansion
 /// Macro used for shortening some debugging code.

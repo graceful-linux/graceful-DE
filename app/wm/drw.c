@@ -113,9 +113,7 @@ drw_create(Display *dpy, int screen, Window root, unsigned int w, unsigned int h
     drw->depth = depth;
     drw->cmap = cmap;
     drw->drawable = XCreatePixmap(dpy, root, w, h, depth);
-    #if BAR_WINICON_PATCH
     drw->picture = XRenderCreatePicture(dpy, drw->drawable, XRenderFindVisualFormat(dpy, visual), 0, NULL);
-    #endif // BAR_WINICON_PATCH
     drw->gc = XCreateGC(dpy, drw->drawable, 0, NULL);
     #else
     drw->drawable = XCreatePixmap(dpy, root, w, h, DefaultDepth(dpy, screen));
@@ -129,25 +127,21 @@ drw_create(Display *dpy, int screen, Window root, unsigned int w, unsigned int h
     return drw;
 }
 
-void
-drw_resize(Drw *drw, unsigned int w, unsigned int h)
+void drw_resize(Drw *drw, unsigned int w, unsigned int h)
 {
     if (!drw)
         return;
 
     drw->w = w;
     drw->h = h;
-    #if BAR_WINICON_PATCH
-    if (drw->picture)
+    if (drw->picture) {
         XRenderFreePicture(drw->dpy, drw->picture);
-    #endif // BAR_WINICON_PATCH
+    }
     if (drw->drawable)
         XFreePixmap(drw->dpy, drw->drawable);
     #if BAR_ALPHA_PATCH
     drw->drawable = XCreatePixmap(drw->dpy, drw->root, w, h, drw->depth);
-    #if BAR_WINICON_PATCH
     drw->picture = XRenderCreatePicture(drw->dpy, drw->drawable, XRenderFindVisualFormat(drw->dpy, drw->visual), 0, NULL);
-    #endif // BAR_WINICON_PATCH
     #else // !BAR_ALPHA_PATCH
     drw->drawable = XCreatePixmap(drw->dpy, drw->root, w, h, DefaultDepth(drw->dpy, drw->screen));
     #if BAR_WINICON_PATCH
@@ -156,12 +150,9 @@ drw_resize(Drw *drw, unsigned int w, unsigned int h)
     #endif // BAR_ALPHA_PATCH
 }
 
-void
-drw_free(Drw *drw)
+void drw_free(Drw *drw)
 {
-    #if BAR_WINICON_PATCH
     XRenderFreePicture(drw->dpy, drw->picture);
-    #endif // BAR_WINICON_PATCH
     XFreePixmap(drw->dpy, drw->drawable);
     XFreeGC(drw->dpy, drw->gc);
     drw_fontset_free(drw->fonts);

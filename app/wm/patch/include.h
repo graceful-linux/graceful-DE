@@ -48,9 +48,7 @@
 #if BAR_STATUSCOLORS_PATCH
 #include "bar_statuscolors.h"
 #endif
-#if BAR_WINICON_PATCH
 #include "bar_winicon.h"
-#endif
 #if BAR_TABGROUPS_PATCH
 #include "bar_tabgroups.h"
 #endif
@@ -84,9 +82,7 @@
 #if BAR_AWESOMEBAR_PATCH
 #include "bar_awesomebar.h"
 #endif
-#if BAR_SYSTRAY_PATCH
 #include "bar_systray.h"
-#endif
 #if BAR_VTCOLORS_PATCH
 #include "bar_vtcolors.h"
 #endif

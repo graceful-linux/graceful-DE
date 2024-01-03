@@ -1,43 +1,46 @@
 
-static int useargb = 0;
-static Visual *visual;
+static bool gsUseArgb = false;
+static Visual* visual = NULL;
 static int depth;
 static Colormap cmap;
 
-void
-xinitvisual()
+void xinit_visual()
 {
-	XVisualInfo *infos;
-	XRenderPictFormat *fmt;
-	int nitems;
-	int i;
+    int nItems;
+    XVisualInfo *infos;
+    XRenderPictFormat *fmt;
 
-	XVisualInfo tpl = {
-		.screen = screen,
-		.depth = 32,
-		.class = TrueColor
-	};
-	long masks = VisualScreenMask | VisualDepthMask | VisualClassMask;
+    XVisualInfo tpl = {
+        .screen = screen,
+        .depth = 32,
+        .class = TrueColor
+    };
+    long masks = VisualScreenMask | VisualDepthMask | VisualClassMask;
 
-	infos = XGetVisualInfo(dpy, masks, &tpl, &nitems);
-	visual = NULL;
-	for (i = 0; i < nitems; i ++) {
-		fmt = XRenderFindVisualFormat(dpy, infos[i].visual);
-		if (fmt->type == PictTypeDirect && fmt->direct.alphaMask) {
-			visual = infos[i].visual;
-			depth = infos[i].depth;
-			cmap = XCreateColormap(dpy, root, visual, AllocNone);
-			useargb = 1;
-			break;
-		}
-	}
+    infos = XGetVisualInfo(dpy, masks, &tpl, &nItems);
+    if (G_UNLIKELY(!infos)) {
+        LOG_ERROR("XGetVisualInfo error!");
+        return;
+    }
 
-	XFree(infos);
+    visual = NULL;
+    for (int i = 0; i < nItems; i ++) {
+        fmt = XRenderFindVisualFormat(dpy, infos[i].visual);
+        if (fmt->type == PictTypeDirect && fmt->direct.alphaMask) {
+            visual = infos[i].visual;
+            depth = infos[i].depth;
+            cmap = XCreateColormap(dpy, root, visual, AllocNone);
+            gsUseArgb = true;
+            break;
+        }
+    }
 
-	if (!visual) {
-		visual = DefaultVisual(dpy, screen);
-		depth = DefaultDepth(dpy, screen);
-		cmap = DefaultColormap(dpy, screen);
-	}
+    XFree(infos);
+
+    if (!visual) {
+        visual = DefaultVisual(dpy, screen);
+        depth = DefaultDepth(dpy, screen);
+        cmap = DefaultColormap(dpy, screen);
+    }
 }
 

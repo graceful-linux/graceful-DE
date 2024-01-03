@@ -45,9 +45,7 @@
 #if BAR_STATUSCOLORS_PATCH
 #include "bar_statuscolors.c"
 #endif
-#if BAR_WINICON_PATCH
 #include "bar_winicon.c"
-#endif
 #if BAR_TABGROUPS_PATCH
 #include "bar_tabgroups.c"
 #endif
@@ -81,9 +79,7 @@
 #if BAR_AWESOMEBAR_PATCH
 #include "bar_awesomebar.c"
 #endif
-#if BAR_SYSTRAY_PATCH
 #include "bar_systray.c"
-#endif
 #if BAR_HOLDBAR_PATCH
 #include "bar_holdbar.c"
 #endif
