@@ -385,12 +385,6 @@
  */
 #define ASPECTRESIZE_PATCH 1
 
-/* This patch adds new clients above the selected client, instead of always
- * becoming the new master. This behaviour is known from Xmonad.
- * This patch takes precedence over ATTACHASIDE_PATCH.
- * https://dwm.suckless.org/patches/attachabove/
- */
-#define ATTACHABOVE_PATCH 1
 
 /* This patch adds new clients on top of the stack.
  * This patch takes precedence over ATTACHBELOW_PATCH.
@@ -477,11 +471,6 @@
  */
 #define COOL_AUTOSTART_PATCH 0
 
-/* The cyclelayouts patch lets you cycle through all your layouts.
- * https://dwm.suckless.org/patches/cyclelayouts/
- */
-#define CYCLELAYOUTS_PATCH 0
-
 /* Make dwm respect _MOTIF_WM_HINTS property, and not draw borders around windows requesting
  * for it. Some applications use this property to notify window managers to not draw window
  * decorations.
@@ -495,31 +484,13 @@
  * It is a variant of the reorganizetags patch.
  * https://dwm.suckless.org/patches/reorganizetags/
  */
-#define DISTRIBUTETAGS_PATCH 0
-
-/* By default dwm will terminate on color allocation failure and the behaviour is intended to
- * catch and inform the user of color configuration issues.
- *
- * Some patches like status2d and xresources / xrdb can change colours during runtime, which
- * means that if a color can't be allocated at this time then the window manager will abruptly
- * terminate.
- *
- * This patch will ignore color allocation failures and continue on as normal. The effect of
- * this is that the existing color, that was supposed to be replaced, will remain as-is.
- */
-#define DO_NOT_DIE_ON_COLOR_ALLOCATION_FAILURE_PATCH 0
+#define DISTRIBUTETAGS_PATCH 1
 
 /* Similarly to the dragmfact patch this allows you to click and drag clients to change the
  * cfact to adjust the client's size in the stack. This patch depends on the cfacts patch.
  */
 #define DRAGCFACT_PATCH 0
 
-/* This patch lets you resize the split in the tile layout (i.e. modify mfact) by holding
- * the modkey and dragging the mouse.
- * This patch can be a bit wonky with other layouts, but generally works.
- * https://dwm.suckless.org/patches/dragmfact/
- */
-#define DRAGMFACT_PATCH 0
 
 /* Simple dwmc client using a fork of fsignal to communicate with dwm.
  * To use this either copy the patch/dwmc shell script to somewhere in your path or
@@ -535,13 +506,6 @@
  * https://dwm.suckless.org/patches/emptyview/
  */
 #define EMPTYVIEW_PATCH 1
-
-/* This patch allows the user to change size and placement of floating windows using only the
- * keyboard. It also allows for temporary vertical and horizontal extension of windows similar
- * to other WMs fill command.
- * https://dwm.suckless.org/patches/exresize/
- */
-#define EXRESIZE_PATCH 0
 
 /* Only allow clients to "fullscreen" into the space currently given to them.
  * As an example, this will allow you to view a fullscreen video in your browser on
@@ -582,12 +546,6 @@
  * https://github.com/bakkeby/patches/wiki/focusdir/
  */
 #define FOCUSDIR_PATCH 0
-
-/* When changing tags, closing windows or moving clients out of view then focus will revert to the
- * client window that remains under the mouse cursor rather than the most recently focused window.
- * https://github.com/bakkeby/patches/wiki/focusfollowmouse
- */
-#define FOCUSFOLLOWMOUSE_PATCH 0
 
 /* A simple patch that just puts focus back to the master client.
  * https://dwm.suckless.org/patches/focusmaster/
@@ -760,11 +718,6 @@
  * The toggle does nothing on its own and need to be enabled in combination with the above. */
 #define NAMETAG_PREPEND_PATCH 0
 
-/* Adds support for the _NET_CLIENT_LIST_STACKING atom, needed by certain applications like the
- * Zoom video conferencing application.
- * https://github.com/bakkeby/patches/wiki/netclientliststacking/
- */
-#define NET_CLIENT_LIST_STACKING_PATCH 0
 
 /* This patch allows for toggleable client button bindings that have no modifiers.
  * This can, for example, allow you to move or resize using the mouse alone without holding

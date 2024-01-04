@@ -1080,228 +1080,241 @@ get_alpha_pict_o(session_t *ps, opacity_t o) {
   return get_alpha_pict_d(ps, (double) o / OPAQUE);
 }
 
-static win *
-paint_preprocess(session_t *ps, win *list) {
-  win *t = NULL, *next = NULL;
+static win* paint_preprocess(session_t *ps, win *list)
+{
+    win *t = NULL, *next = NULL;
 
-  // Fading step calculation
-  time_ms_t steps = 0L;
-  if (ps->fade_time) {
-    steps = ((get_time_ms() - ps->fade_time) + FADE_DELTA_TOLERANCE * ps->o.fade_delta) / ps->o.fade_delta;
-  }
-  // Reset fade_time if unset, or there appears to be a time disorder
-  if (!ps->fade_time || steps < 0L) {
-    ps->fade_time = get_time_ms();
-    steps = 0L;
-  }
-  ps->fade_time += steps * ps->o.fade_delta;
-
-  XserverRegion last_reg_ignore = None;
-
-  bool unredir_possible = false;
-  // Trace whether it's the highest window to paint
-  bool is_highest = true;
-  for (win *w = list; w; w = next) {
-    bool to_paint = true;
-    const winmode_t mode_old = w->mode;
-
-    // In case calling the fade callback function destroys this window
-    next = w->next;
-    opacity_t opacity_old = w->opacity;
-
-    // Data expiration
-    {
-      // Remove built shadow if needed
-      if (w->flags & WFLAG_SIZE_CHANGE)
-        free_paint(ps, &w->shadow_paint);
-
-      // Destroy reg_ignore on all windows if they should expire
-      if (ps->reg_ignore_expire)
-        free_region(ps, &w->reg_ignore);
+    // Fading step calculation
+    time_ms_t steps = 0L;
+    if (ps->fade_time) {
+        steps = ((get_time_ms() - ps->fade_time) + FADE_DELTA_TOLERANCE * ps->o.fade_delta) / ps->o.fade_delta;
     }
-
-    // Restore flags from last paint if the window is being faded out
-    if (IsUnmapped == w->a.map_state) {
-      win_set_shadow(ps, w, w->shadow_last);
-      w->fade = w->fade_last;
-      win_set_invert_color(ps, w, w->invert_color_last);
-      win_set_blur_background(ps, w, w->blur_background_last);
+    // Reset fade_time if unset, or there appears to be a time disorder
+    if (!ps->fade_time || steps < 0L) {
+        ps->fade_time = get_time_ms();
+        steps = 0L;
     }
+    ps->fade_time += steps * ps->o.fade_delta;
 
-    // Update window opacity target and dim state if asked
-    if (WFLAG_OPCT_CHANGE & w->flags) {
-      calc_opacity(ps, w);
-      calc_dim(ps, w);
-    }
+    XserverRegion last_reg_ignore = None;
 
-    // Run fading
-    run_fade(ps, w, steps);
+    bool unredir_possible = false;
+    // Trace whether it's the highest window to paint
+    bool is_highest = true;
+    for (win *w = list; w; w = next) {
+        bool to_paint = true;
+        const winmode_t mode_old = w->mode;
 
-    // Opacity will not change, from now on.
+        // In case calling the fade callback function destroys this window
+        next = w->next;
+        opacity_t opacity_old = w->opacity;
 
-    // Give up if it's not damaged or invisible, or it's unmapped and its
-    // pixmap is gone (for example due to a ConfigureNotify), or when it's
-    // excluded
-    if (!w->damaged
-        || w->a.x + w->a.width < 1 || w->a.y + w->a.height < 1
-        || w->a.x >= ps->root_width || w->a.y >= ps->root_height
-        || ((IsUnmapped == w->a.map_state || w->destroyed) && !w->paint.pixmap)
-        || get_alpha_pict_o(ps, w->opacity) == ps->alpha_picts[0]
-        || w->paint_excluded)
-      to_paint = false;
+        // Data expiration
+        {
+            // Remove built shadow if needed
+            if (w->flags & WFLAG_SIZE_CHANGE) {
+                free_paint(ps, &w->shadow_paint);
+            }
 
-    // to_paint will never change afterward
-
-    // Determine mode as early as possible
-    if (to_paint && (!w->to_paint || w->opacity != opacity_old))
-      win_determine_mode(ps, w);
-
-    if (to_paint) {
-      // Fetch bounding region
-      if (!w->border_size)
-        w->border_size = border_size(ps, w, true);
-
-      // Fetch window extents
-      if (!w->extents)
-        w->extents = win_extents(ps, w);
-
-      // Calculate frame_opacity
-      {
-        double frame_opacity_old = w->frame_opacity;
-
-        if (ps->o.frame_opacity && 1.0 != ps->o.frame_opacity
-            && win_has_frame(w))
-          w->frame_opacity = get_opacity_percent(w) *
-            ps->o.frame_opacity;
-        else
-          w->frame_opacity = 0.0;
-
-        // Destroy all reg_ignore above when frame opaque state changes on
-        // SOLID mode
-        if (w->to_paint && WMODE_SOLID == mode_old
-            && (0.0 == frame_opacity_old) != (0.0 == w->frame_opacity))
-          ps->reg_ignore_expire = true;
-      }
-
-      // Calculate shadow opacity
-      if (w->frame_opacity)
-        w->shadow_opacity = ps->o.shadow_opacity * w->frame_opacity;
-      else
-        w->shadow_opacity = ps->o.shadow_opacity * get_opacity_percent(w);
-    }
-
-    // Add window to damaged area if its painting status changes
-    // or opacity changes
-    if (to_paint != w->to_paint || w->opacity != opacity_old)
-      add_damage_win(ps, w);
-
-    // Destroy all reg_ignore above when window mode changes
-    if ((to_paint && WMODE_SOLID == w->mode)
-        != (w->to_paint && WMODE_SOLID == mode_old))
-      ps->reg_ignore_expire = true;
-
-    if (to_paint) {
-      // Generate ignore region for painting to reduce GPU load
-      if (ps->reg_ignore_expire || !w->to_paint) {
-        free_region(ps, &w->reg_ignore);
-
-        // If the window is solid, we add the window region to the
-        // ignored region
-        if (win_is_solid(ps, w)) {
-          if (!w->frame_opacity) {
-            if (w->border_size)
-              w->reg_ignore = copy_region(ps, w->border_size);
-            else
-              w->reg_ignore = win_get_region(ps, w, true);
-          }
-          else {
-            w->reg_ignore = win_get_region_noframe(ps, w, true);
-            if (w->border_size)
-              XFixesIntersectRegion(ps->dpy, w->reg_ignore, w->reg_ignore,
-                  w->border_size);
-          }
-
-          if (last_reg_ignore)
-            XFixesUnionRegion(ps->dpy, w->reg_ignore, w->reg_ignore,
-                last_reg_ignore);
+            // Destroy reg_ignore on all windows if they should expire
+            if (ps->reg_ignore_expire) {
+                free_region(ps, &w->reg_ignore);
+            }
         }
-        // Otherwise we copy the last region over
-        else if (last_reg_ignore)
-          w->reg_ignore = copy_region(ps, last_reg_ignore);
-        else
-          w->reg_ignore = None;
-      }
 
-      last_reg_ignore = w->reg_ignore;
+        // Restore flags from last paint if the window is being faded out
+        if (IsUnmapped == w->a.map_state) {
+            win_set_shadow(ps, w, w->shadow_last);
+            w->fade = w->fade_last;
+            win_set_invert_color(ps, w, w->invert_color_last);
+            win_set_blur_background(ps, w, w->blur_background_last);
+        }
 
-      // (Un)redirect screen
-      // We could definitely unredirect the screen when there's no window to
-      // paint, but this is typically unnecessary, may cause flickering when
-      // fading is enabled, and could create inconsistency when the wallpaper
-      // is not correctly set.
-      if (ps->o.unredir_if_possible && is_highest && to_paint) {
-        is_highest = false;
-        if (win_is_solid(ps, w)
-            && (!w->frame_opacity || !win_has_frame(w))
-            && win_is_fullscreen(ps, w)
-            && !w->unredir_if_possible_excluded)
-          unredir_possible = true;
-      }
+        // Update window opacity target and dim state if asked
+        if (WFLAG_OPCT_CHANGE & w->flags) {
+            calc_opacity(ps, w);
+            calc_dim(ps, w);
+        }
 
-      // Reset flags
-      w->flags = 0;
+        // Run fading
+        run_fade(ps, w, steps);
+
+        // Opacity will not change, from now on.
+
+        // Give up if it's not damaged or invisible, or it's unmapped and its
+        // pixmap is gone (for example due to a ConfigureNotify), or when it's
+        // excluded
+        if (!w->damaged
+            || w->a.x + w->a.width < 1
+            || w->a.y + w->a.height < 1
+            || w->a.x >= ps->root_width
+            || w->a.y >= ps->root_height
+            || ((IsUnmapped == w->a.map_state || w->destroyed) && !w->paint.pixmap)
+            || get_alpha_pict_o(ps, w->opacity) == ps->alpha_picts[0]
+            || w->paint_excluded) {
+            to_paint = false;
+        }
+
+        // to_paint will never change afterward
+        // Determine mode as early as possible
+        if (to_paint && (!w->to_paint || w->opacity != opacity_old)) {
+            win_determine_mode(ps, w);
+        }
+
+        if (to_paint) {
+            // Fetch bounding region
+            if (!w->border_size) {
+                w->border_size = border_size(ps, w, true);
+            }
+
+            // Fetch window extents
+            if (!w->extents) {
+                w->extents = win_extents(ps, w);
+            }
+
+            // Calculate frame_opacity
+            {
+                double frame_opacity_old = w->frame_opacity;
+                if (ps->o.frame_opacity && 1.0 != ps->o.frame_opacity && win_has_frame(w)) {
+                    w->frame_opacity = get_opacity_percent(w) * ps->o.frame_opacity;
+                }
+                else {
+                    w->frame_opacity = 0.0;
+                }
+
+                // Destroy all reg_ignore above when frame opaque state changes on
+                // SOLID mode
+                if (w->to_paint && WMODE_SOLID == mode_old && (0.0 == frame_opacity_old) != (0.0 == w->frame_opacity)) {
+                    ps->reg_ignore_expire = true;
+                }
+            }
+
+            // Calculate shadow opacity
+            if (w->frame_opacity) {
+                w->shadow_opacity = ps->o.shadow_opacity * w->frame_opacity;
+            }
+            else {
+                w->shadow_opacity = ps->o.shadow_opacity * get_opacity_percent(w);
+            }
+        }
+
+        // Add window to damaged area if its painting status changes
+        // or opacity changes
+        if (to_paint != w->to_paint || w->opacity != opacity_old) {
+            add_damage_win(ps, w);
+        }
+
+        // Destroy all reg_ignore above when window mode changes
+        if ((to_paint && WMODE_SOLID == w->mode) != (w->to_paint && WMODE_SOLID == mode_old)) {
+            ps->reg_ignore_expire = true;
+        }
+
+        if (to_paint) {
+            // Generate ignore region for painting to reduce GPU load
+            if (ps->reg_ignore_expire || !w->to_paint) {
+                free_region(ps, &w->reg_ignore);
+                // If the window is solid, we add the window region to the ignored region
+                if (win_is_solid(ps, w)) {
+                    if (!w->frame_opacity) {
+                        if (w->border_size) {
+                            w->reg_ignore = copy_region(ps, w->border_size);
+                        }
+                        else {
+                            w->reg_ignore = win_get_region(ps, w, true);
+                        }
+                    }
+                    else {
+                        w->reg_ignore = win_get_region_noframe(ps, w, true);
+                        if (w->border_size) {
+                            XFixesIntersectRegion(ps->dpy, w->reg_ignore, w->reg_ignore, w->border_size);
+                        }
+                    }
+
+                    if (last_reg_ignore) {
+                        XFixesUnionRegion(ps->dpy, w->reg_ignore, w->reg_ignore, last_reg_ignore);
+                    }
+                }
+                else if (last_reg_ignore) {
+                    // Otherwise we copy the last region over
+                    w->reg_ignore = copy_region(ps, last_reg_ignore);
+                }
+                else {
+                    w->reg_ignore = None;
+                }
+            }
+
+            last_reg_ignore = w->reg_ignore;
+
+            // (Un)redirect screen
+            // We could definitely unredirect the screen when there's no window to
+            // paint, but this is typically unnecessary, may cause flickering when
+            // fading is enabled, and could create inconsistency when the wallpaper
+            // is not correctly set.
+            if (ps->o.unredir_if_possible && is_highest && to_paint) {
+                is_highest = false;
+                if (win_is_solid(ps, w)
+                    && (!w->frame_opacity || !win_has_frame(w))
+                    && win_is_fullscreen(ps, w)
+                    && !w->unredir_if_possible_excluded) {
+                    unredir_possible = true;
+                }
+            }
+
+            // Reset flags
+            w->flags = 0;
+        }
+
+        // Avoid setting w->to_paint if w is to be freed
+        bool destroyed = (w->opacity_tgt == w->opacity && w->destroyed);
+        if (to_paint) {
+            w->prev_trans = t;
+            t = w;
+        }
+        else {
+            assert(w->destroyed == (w->fade_callback == destroy_callback));
+            check_fade_fin(ps, w);
+        }
+
+        if (!destroyed) {
+            w->to_paint = to_paint;
+
+            if (w->to_paint) {
+                // Save flags
+                w->shadow_last = w->shadow;
+                w->fade_last = w->fade;
+                w->invert_color_last = w->invert_color;
+                w->blur_background_last = w->blur_background;
+            }
+        }
     }
 
-    // Avoid setting w->to_paint if w is to be freed
-    bool destroyed = (w->opacity_tgt == w->opacity && w->destroyed);
+    // If possible, unredirect all windows and stop painting
+    if (UNSET != ps->o.redirected_force) {
+        unredir_possible = !ps->o.redirected_force;
+    }
 
-    if (to_paint) {
-      w->prev_trans = t;
-      t = w;
+    // If there's no window to paint, and the screen isn't redirected,
+    // don't redirect it.
+    if (ps->o.unredir_if_possible && is_highest && !ps->redirected) {
+        unredir_possible = true;
+    }
+    if (unredir_possible) {
+        if (ps->redirected) {
+            if (!ps->o.unredir_if_possible_delay || ps->tmout_unredir_hit) {
+                redir_stop(ps);
+            }
+            else if (!ps->tmout_unredir->enabled) {
+                timeout_reset(ps, ps->tmout_unredir);
+                ps->tmout_unredir->enabled = true;
+            }
+        }
     }
     else {
-      assert(w->destroyed == (w->fade_callback == destroy_callback));
-      check_fade_fin(ps, w);
+        ps->tmout_unredir->enabled = false;
+        redir_start(ps);
     }
 
-    if (!destroyed) {
-      w->to_paint = to_paint;
-
-      if (w->to_paint) {
-        // Save flags
-        w->shadow_last = w->shadow;
-        w->fade_last = w->fade;
-        w->invert_color_last = w->invert_color;
-        w->blur_background_last = w->blur_background;
-      }
-    }
-  }
-
-
-  // If possible, unredirect all windows and stop painting
-  if (UNSET != ps->o.redirected_force)
-    unredir_possible = !ps->o.redirected_force;
-
-  // If there's no window to paint, and the screen isn't redirected,
-  // don't redirect it.
-  if (ps->o.unredir_if_possible && is_highest && !ps->redirected)
-    unredir_possible = true;
-  if (unredir_possible) {
-    if (ps->redirected) {
-      if (!ps->o.unredir_if_possible_delay || ps->tmout_unredir_hit)
-        redir_stop(ps);
-      else if (!ps->tmout_unredir->enabled) {
-        timeout_reset(ps, ps->tmout_unredir);
-        ps->tmout_unredir->enabled = true;
-      }
-    }
-  }
-  else {
-    ps->tmout_unredir->enabled = false;
-    redir_start(ps);
-  }
-
-  return t;
+    return t;
 }
 
 /**
@@ -4976,21 +4989,22 @@ fork_after(session_t *ps) {
 /**
  * Write PID to a file.
  */
-static inline bool
-write_pid(session_t *ps) {
-  if (!ps->o.write_pid_path)
+static inline bool write_pid(session_t *ps)
+{
+    if (!ps->o.write_pid_path) {
+        return true;
+    }
+
+    FILE *f = fopen(ps->o.write_pid_path, "w");
+    if (unlikely(!f)) {
+        LOG_ERROR("Failed to write PID to \"%s\".", ps->o.write_pid_path);
+        return false;
+    }
+
+    fprintf(f, "%ld\n", (long) getpid());
+    fclose(f);
+
     return true;
-
-  FILE *f = fopen(ps->o.write_pid_path, "w");
-  if (unlikely(!f)) {
-    printf_errf("(): Failed to write PID to \"%s\".", ps->o.write_pid_path);
-    return false;
-  }
-
-  fprintf(f, "%ld\n", (long) getpid());
-  fclose(f);
-
-  return true;
 }
 
 /**
@@ -5672,453 +5686,475 @@ parse_config(session_t *ps, struct options_tmp *pcfgtmp) {
 /**
  * Process arguments and configuration files.
  */
-static void
-get_cfg(session_t *ps, int argc, char *const *argv, bool first_pass) {
-  const static char *shortopts = "D:I:O:d:r:o:m:l:t:i:e:hscnfFCaSzGb";
-  const static struct option longopts[] = {
-    { "help", no_argument, NULL, 'h' },
-    { "config", required_argument, NULL, 256 },
-    { "shadow-radius", required_argument, NULL, 'r' },
-    { "shadow-opacity", required_argument, NULL, 'o' },
-    { "shadow-offset-x", required_argument, NULL, 'l' },
-    { "shadow-offset-y", required_argument, NULL, 't' },
-    { "fade-in-step", required_argument, NULL, 'I' },
-    { "fade-out-step", required_argument, NULL, 'O' },
-    { "fade-delta", required_argument, NULL, 'D' },
-    { "menu-opacity", required_argument, NULL, 'm' },
-    { "shadow", no_argument, NULL, 'c' },
-    { "no-dock-shadow", no_argument, NULL, 'C' },
-    { "clear-shadow", no_argument, NULL, 'z' },
-    { "fading", no_argument, NULL, 'f' },
-    { "inactive-opacity", required_argument, NULL, 'i' },
-    { "frame-opacity", required_argument, NULL, 'e' },
-    { "daemon", no_argument, NULL, 'b' },
-    { "no-dnd-shadow", no_argument, NULL, 'G' },
-    { "shadow-red", required_argument, NULL, 257 },
-    { "shadow-green", required_argument, NULL, 258 },
-    { "shadow-blue", required_argument, NULL, 259 },
-    { "inactive-opacity-override", no_argument, NULL, 260 },
-    { "inactive-dim", required_argument, NULL, 261 },
-    { "mark-wmwin-focused", no_argument, NULL, 262 },
-    { "shadow-exclude", required_argument, NULL, 263 },
-    { "mark-ovredir-focused", no_argument, NULL, 264 },
-    { "no-fading-openclose", no_argument, NULL, 265 },
-    { "shadow-ignore-shaped", no_argument, NULL, 266 },
-    { "detect-rounded-corners", no_argument, NULL, 267 },
-    { "detect-client-opacity", no_argument, NULL, 268 },
-    { "refresh-rate", required_argument, NULL, 269 },
-    { "vsync", required_argument, NULL, 270 },
-    { "alpha-step", required_argument, NULL, 271 },
-    { "dbe", no_argument, NULL, 272 },
-    { "paint-on-overlay", no_argument, NULL, 273 },
-    { "sw-opti", no_argument, NULL, 274 },
-    { "vsync-aggressive", no_argument, NULL, 275 },
-    { "use-ewmh-active-win", no_argument, NULL, 276 },
-    { "respect-prop-shadow", no_argument, NULL, 277 },
-    { "unredir-if-possible", no_argument, NULL, 278 },
-    { "focus-exclude", required_argument, NULL, 279 },
-    { "inactive-dim-fixed", no_argument, NULL, 280 },
-    { "detect-transient", no_argument, NULL, 281 },
-    { "detect-client-leader", no_argument, NULL, 282 },
-    { "blur-background", no_argument, NULL, 283 },
-    { "blur-background-frame", no_argument, NULL, 284 },
-    { "blur-background-fixed", no_argument, NULL, 285 },
-    { "dbus", no_argument, NULL, 286 },
-    { "logpath", required_argument, NULL, 287 },
-    { "invert-color-include", required_argument, NULL, 288 },
-    { "opengl", no_argument, NULL, 289 },
-    { "backend", required_argument, NULL, 290 },
-    { "glx-no-stencil", no_argument, NULL, 291 },
-    { "glx-copy-from-front", no_argument, NULL, 292 },
-    { "benchmark", required_argument, NULL, 293 },
-    { "benchmark-wid", required_argument, NULL, 294 },
-    { "glx-use-copysubbuffermesa", no_argument, NULL, 295 },
-    { "blur-background-exclude", required_argument, NULL, 296 },
-    { "active-opacity", required_argument, NULL, 297 },
-    { "glx-no-rebind-pixmap", no_argument, NULL, 298 },
-    { "glx-swap-method", required_argument, NULL, 299 },
-    { "fade-exclude", required_argument, NULL, 300 },
-    { "blur-kern", required_argument, NULL, 301 },
-    { "resize-damage", required_argument, NULL, 302 },
-    { "glx-use-gpushader4", no_argument, NULL, 303 },
-    { "opacity-rule", required_argument, NULL, 304 },
-    { "shadow-exclude-reg", required_argument, NULL, 305 },
-    { "paint-exclude", required_argument, NULL, 306 },
-    { "xinerama-shadow-crop", no_argument, NULL, 307 },
-    { "unredir-if-possible-exclude", required_argument, NULL, 308 },
-    { "unredir-if-possible-delay", required_argument, NULL, 309 },
-    { "write-pid-path", required_argument, NULL, 310 },
-    { "vsync-use-glfinish", no_argument, NULL, 311 },
-    { "xrender-sync", no_argument, NULL, 312 },
-    { "xrender-sync-fence", no_argument, NULL, 313 },
-    { "show-all-xerrors", no_argument, NULL, 314 },
-    { "no-fading-destroyed-argb", no_argument, NULL, 315 },
-    { "force-win-blend", no_argument, NULL, 316 },
-    { "glx-fshader-win", required_argument, NULL, 317 },
-    { "version", no_argument, NULL, 318 },
-    { "no-x-selection", no_argument, NULL, 319 },
-    { "no-name-pixmap", no_argument, NULL, 320 },
-    { "reredir-on-root-change", no_argument, NULL, 731 },
-    { "glx-reinit-on-root-change", no_argument, NULL, 732 },
-    // Must terminate with a NULL entry
-    { NULL, 0, NULL, 0 },
-  };
+static void get_cfg(session_t *ps, int argc, char *const *argv, bool first_pass)
+{
+    const static char *shortopts = "D:I:O:d:r:o:m:l:t:i:e:hscnfFCaSzGb";
+    const static struct option longopts[] = {
+        { "help", no_argument, NULL, 'h' },
+        { "config", required_argument, NULL, 256 },
+        { "shadow-radius", required_argument, NULL, 'r' },
+        { "shadow-opacity", required_argument, NULL, 'o' },
+        { "shadow-offset-x", required_argument, NULL, 'l' },
+        { "shadow-offset-y", required_argument, NULL, 't' },
+        { "fade-in-step", required_argument, NULL, 'I' },
+        { "fade-out-step", required_argument, NULL, 'O' },
+        { "fade-delta", required_argument, NULL, 'D' },
+        { "menu-opacity", required_argument, NULL, 'm' },
+        { "shadow", no_argument, NULL, 'c' },
+        { "no-dock-shadow", no_argument, NULL, 'C' },
+        { "clear-shadow", no_argument, NULL, 'z' },
+        { "fading", no_argument, NULL, 'f' },
+        { "inactive-opacity", required_argument, NULL, 'i' },
+        { "frame-opacity", required_argument, NULL, 'e' },
+        { "daemon", no_argument, NULL, 'b' },
+        { "no-dnd-shadow", no_argument, NULL, 'G' },
+        { "shadow-red", required_argument, NULL, 257 },
+        { "shadow-green", required_argument, NULL, 258 },
+        { "shadow-blue", required_argument, NULL, 259 },
+        { "inactive-opacity-override", no_argument, NULL, 260 },
+        { "inactive-dim", required_argument, NULL, 261 },
+        { "mark-wmwin-focused", no_argument, NULL, 262 },
+        { "shadow-exclude", required_argument, NULL, 263 },
+        { "mark-ovredir-focused", no_argument, NULL, 264 },
+        { "no-fading-openclose", no_argument, NULL, 265 },
+        { "shadow-ignore-shaped", no_argument, NULL, 266 },
+        { "detect-rounded-corners", no_argument, NULL, 267 },
+        { "detect-client-opacity", no_argument, NULL, 268 },
+        { "refresh-rate", required_argument, NULL, 269 },
+        { "vsync", required_argument, NULL, 270 },
+        { "alpha-step", required_argument, NULL, 271 },
+        { "dbe", no_argument, NULL, 272 },
+        { "paint-on-overlay", no_argument, NULL, 273 },
+        { "sw-opti", no_argument, NULL, 274 },
+        { "vsync-aggressive", no_argument, NULL, 275 },
+        { "use-ewmh-active-win", no_argument, NULL, 276 },
+        { "respect-prop-shadow", no_argument, NULL, 277 },
+        { "unredir-if-possible", no_argument, NULL, 278 },
+        { "focus-exclude", required_argument, NULL, 279 },
+        { "inactive-dim-fixed", no_argument, NULL, 280 },
+        { "detect-transient", no_argument, NULL, 281 },
+        { "detect-client-leader", no_argument, NULL, 282 },
+        { "blur-background", no_argument, NULL, 283 },
+        { "blur-background-frame", no_argument, NULL, 284 },
+        { "blur-background-fixed", no_argument, NULL, 285 },
+        { "dbus", no_argument, NULL, 286 },
+        { "logpath", required_argument, NULL, 287 },
+        { "invert-color-include", required_argument, NULL, 288 },
+        { "opengl", no_argument, NULL, 289 },
+        { "backend", required_argument, NULL, 290 },
+        { "glx-no-stencil", no_argument, NULL, 291 },
+        { "glx-copy-from-front", no_argument, NULL, 292 },
+        { "benchmark", required_argument, NULL, 293 },
+        { "benchmark-wid", required_argument, NULL, 294 },
+        { "glx-use-copysubbuffermesa", no_argument, NULL, 295 },
+        { "blur-background-exclude", required_argument, NULL, 296 },
+        { "active-opacity", required_argument, NULL, 297 },
+        { "glx-no-rebind-pixmap", no_argument, NULL, 298 },
+        { "glx-swap-method", required_argument, NULL, 299 },
+        { "fade-exclude", required_argument, NULL, 300 },
+        { "blur-kern", required_argument, NULL, 301 },
+        { "resize-damage", required_argument, NULL, 302 },
+        { "glx-use-gpushader4", no_argument, NULL, 303 },
+        { "opacity-rule", required_argument, NULL, 304 },
+        { "shadow-exclude-reg", required_argument, NULL, 305 },
+        { "paint-exclude", required_argument, NULL, 306 },
+        { "xinerama-shadow-crop", no_argument, NULL, 307 },
+        { "unredir-if-possible-exclude", required_argument, NULL, 308 },
+        { "unredir-if-possible-delay", required_argument, NULL, 309 },
+        { "write-pid-path", required_argument, NULL, 310 },
+        { "vsync-use-glfinish", no_argument, NULL, 311 },
+        { "xrender-sync", no_argument, NULL, 312 },
+        { "xrender-sync-fence", no_argument, NULL, 313 },
+        { "show-all-xerrors", no_argument, NULL, 314 },
+        { "no-fading-destroyed-argb", no_argument, NULL, 315 },
+        { "force-win-blend", no_argument, NULL, 316 },
+        { "glx-fshader-win", required_argument, NULL, 317 },
+        { "version", no_argument, NULL, 318 },
+        { "no-x-selection", no_argument, NULL, 319 },
+        { "no-name-pixmap", no_argument, NULL, 320 },
+        { "reredir-on-root-change", no_argument, NULL, 731 },
+        { "glx-reinit-on-root-change", no_argument, NULL, 732 },
+        // Must terminate with a NULL entry
+        // { NULL, 0, NULL, 0 },
+    };
 
-  int o = 0, longopt_idx = -1, i = 0;
+    int o = 0, longopt_idx = -1, i = 0;
 
-  if (first_pass) {
-    // Pre-parse the commandline arguments to check for --config and invalid
-    // switches
-    // Must reset optind to 0 here in case we reread the commandline
-    // arguments
-    optind = 1;
-    while (-1 !=
-        (o = getopt_long(argc, argv, shortopts, longopts, &longopt_idx))) {
-      if (256 == o)
-        ps->o.config_file = mstrcpy(optarg);
-      else if ('d' == o)
-        ps->o.display = mstrcpy(optarg);
-      else if ('S' == o)
-        ps->o.synchronize = true;
-      else if (314 == o)
-        ps->o.show_all_xerrors = true;
-      else if (318 == o) {
-        printf("%s\n", COMPTON_VERSION);
-        exit(0);
-      }
-      else if (320 == o)
-        ps->o.no_name_pixmap = true;
-      else if ('?' == o || ':' == o)
-        usage(1);
+    if (first_pass) {
+        // Pre-parse the commandline arguments to check for --config and invalid
+        // switches
+        // Must reset optind to 0 here in case we reread the commandline
+        // arguments
+        optind = 1;
+        while (-1 != (o = getopt_long(argc, argv, shortopts, longopts, &longopt_idx))) {
+            if (256 == o) {
+                ps->o.config_file = mstrcpy(optarg);
+            }
+            else if ('d' == o) {
+                ps->o.display = mstrcpy(optarg);
+            }
+            else if ('S' == o) {
+                ps->o.synchronize = true;
+            }
+            else if (314 == o) {
+                ps->o.show_all_xerrors = true;
+            }
+            else if (318 == o) {
+                printf("%s\n", COMPTON_VERSION);
+                exit(0);
+            }
+            else if (320 == o) {
+                ps->o.no_name_pixmap = true;
+            }
+            else if ('?' == o || ':' == o) {
+                usage(1);
+            }
+        }
+        // Check for abundant positional arguments
+        if (optind < argc) {
+            LOG_ERROR("compton doesn't accept positional arguments.");
+        }
+
+        return;
     }
 
-    // Check for abundant positional arguments
-    if (optind < argc)
-      printf_errfq(1, "(): compton doesn't accept positional arguments.");
+    struct options_tmp cfgtmp = {
+        .no_dock_shadow = false,
+        .no_dnd_shadow = false,
+        .menu_opacity = 1.0,
+    };
 
-    return;
-  }
+    bool shadow_enable = false, fading_enable = false;
+    char *lc_numeric_old = mstrcpy(setlocale(LC_NUMERIC, NULL));
 
-  struct options_tmp cfgtmp = {
-    .no_dock_shadow = false,
-    .no_dnd_shadow = false,
-    .menu_opacity = 1.0,
-  };
-  bool shadow_enable = false, fading_enable = false;
-  char *lc_numeric_old = mstrcpy(setlocale(LC_NUMERIC, NULL));
+    for (i = 0; i < NUM_WINTYPES; ++i) {
+        ps->o.wintype_fade[i] = false;
+        ps->o.wintype_shadow[i] = false;
+        ps->o.wintype_opacity[i] = 1.0;
+    }
 
-  for (i = 0; i < NUM_WINTYPES; ++i) {
-    ps->o.wintype_fade[i] = false;
-    ps->o.wintype_shadow[i] = false;
-    ps->o.wintype_opacity[i] = 1.0;
-  }
-
-  // Enforce LC_NUMERIC locale "C" here to make sure dots are recognized
-  // instead of commas in atof().
-  setlocale(LC_NUMERIC, "C");
+    // Enforce LC_NUMERIC locale "C" here to make sure dots are recognized
+    // instead of commas in atof().
+    setlocale(LC_NUMERIC, "C");
 
 #ifdef CONFIG_LIBCONFIG
-  parse_config(ps, &cfgtmp);
+    parse_config(ps, &cfgtmp);
 #endif
 
-  // Parse commandline arguments. Range checking will be done later.
+    // Parse commandline arguments. Range checking will be done later.
 
-  optind = 1;
-  while (-1 !=
-      (o = getopt_long(argc, argv, shortopts, longopts, &longopt_idx))) {
-    long val = 0;
-    switch (o) {
+    optind = 1;
+    while (-1 != (o = getopt_long(argc, argv, shortopts, longopts, &longopt_idx))) {
+        long val = 0;
+        switch (o) {
 #define P_CASEBOOL(idx, option) case idx: ps->o.option = true; break
 #define P_CASELONG(idx, option) \
-      case idx: \
-        if (!parse_long(optarg, &val)) exit(1); \
-        ps->o.option = val; \
-        break
+            case idx: \
+                if (!parse_long(optarg, &val)) exit(1); \
+                ps->o.option = val; \
+                break
 
-      // Short options
-      case 'h':
-        usage(0);
-        break;
-      case 'd':
-      case 'S':
-      case 314:
-      case 318:
-      case 320:
-        break;
-      P_CASELONG('D', fade_delta);
-      case 'I':
-        ps->o.fade_in_step = normalize_d(atof(optarg)) * OPAQUE;
-        break;
-      case 'O':
-        ps->o.fade_out_step = normalize_d(atof(optarg)) * OPAQUE;
-        break;
-      case 'c':
-        shadow_enable = true;
-        break;
-      case 'C':
-        cfgtmp.no_dock_shadow = true;
-        break;
-      case 'G':
-        cfgtmp.no_dnd_shadow = true;
-        break;
-      case 'm':
-        cfgtmp.menu_opacity = atof(optarg);
-        break;
-      case 'f':
-      case 'F':
-        fading_enable = true;
-        break;
-      P_CASELONG('r', shadow_radius);
-      case 'o':
-        ps->o.shadow_opacity = atof(optarg);
-        break;
-      P_CASELONG('l', shadow_offset_x);
-      P_CASELONG('t', shadow_offset_y);
-      case 'i':
-        ps->o.inactive_opacity = (normalize_d(atof(optarg)) * OPAQUE);
-        break;
-      case 'e':
-        ps->o.frame_opacity = atof(optarg);
-        break;
-      P_CASEBOOL('z', clear_shadow);
-      case 'n':
-      case 'a':
-      case 's':
-        printf_errfq(1, "(): -n, -a, and -s have been removed.");
-        break;
-      P_CASEBOOL('b', fork_after_register);
-      // Long options
-      case 256:
-        // --config
-        break;
-      case 257:
-        // --shadow-red
-        ps->o.shadow_red = atof(optarg);
-        break;
-      case 258:
-        // --shadow-green
-        ps->o.shadow_green = atof(optarg);
-        break;
-      case 259:
-        // --shadow-blue
-        ps->o.shadow_blue = atof(optarg);
-        break;
-      P_CASEBOOL(260, inactive_opacity_override);
-      case 261:
-        // --inactive-dim
-        ps->o.inactive_dim = atof(optarg);
-        break;
-      P_CASEBOOL(262, mark_wmwin_focused);
-      case 263:
-        // --shadow-exclude
-        condlst_add(ps, &ps->o.shadow_blacklist, optarg);
-        break;
-      P_CASEBOOL(264, mark_ovredir_focused);
-      P_CASEBOOL(265, no_fading_openclose);
-      P_CASEBOOL(266, shadow_ignore_shaped);
-      P_CASEBOOL(267, detect_rounded_corners);
-      P_CASEBOOL(268, detect_client_opacity);
-      P_CASELONG(269, refresh_rate);
-      case 270:
-        // --vsync
-        if (!parse_vsync(ps, optarg))
-          exit(1);
-        break;
-      case 271:
-        // --alpha-step
-        ps->o.alpha_step = atof(optarg);
-        break;
-      P_CASEBOOL(272, dbe);
-      P_CASEBOOL(273, paint_on_overlay);
-      P_CASEBOOL(274, sw_opti);
-      P_CASEBOOL(275, vsync_aggressive);
-      P_CASEBOOL(276, use_ewmh_active_win);
-      P_CASEBOOL(277, respect_prop_shadow);
-      P_CASEBOOL(278, unredir_if_possible);
-      case 279:
-        // --focus-exclude
-        condlst_add(ps, &ps->o.focus_blacklist, optarg);
-        break;
-      P_CASEBOOL(280, inactive_dim_fixed);
-      P_CASEBOOL(281, detect_transient);
-      P_CASEBOOL(282, detect_client_leader);
-      P_CASEBOOL(283, blur_background);
-      P_CASEBOOL(284, blur_background_frame);
-      P_CASEBOOL(285, blur_background_fixed);
-      P_CASEBOOL(286, dbus);
-      case 287:
-        // --logpath
-        ps->o.logpath = mstrcpy(optarg);
-        break;
-      case 288:
-        // --invert-color-include
-        condlst_add(ps, &ps->o.invert_color_list, optarg);
-        break;
-      case 289:
-        // --opengl
-        ps->o.backend = BKEND_GLX;
-        break;
-      case 290:
-        // --backend
-        if (!parse_backend(ps, optarg))
-          exit(1);
-        break;
-      P_CASEBOOL(291, glx_no_stencil);
-      P_CASEBOOL(292, glx_copy_from_front);
-      P_CASELONG(293, benchmark);
-      case 294:
-        // --benchmark-wid
-        ps->o.benchmark_wid = strtol(optarg, NULL, 0);
-        break;
-      P_CASEBOOL(295, glx_use_copysubbuffermesa);
-      case 296:
-        // --blur-background-exclude
-        condlst_add(ps, &ps->o.blur_background_blacklist, optarg);
-        break;
-      case 297:
-        // --active-opacity
-        ps->o.active_opacity = (normalize_d(atof(optarg)) * OPAQUE);
-        break;
-      P_CASEBOOL(298, glx_no_rebind_pixmap);
-      case 299:
-        // --glx-swap-method
-        if (!parse_glx_swap_method(ps, optarg))
-          exit(1);
-        break;
-      case 300:
-        // --fade-exclude
-        condlst_add(ps, &ps->o.fade_blacklist, optarg);
-        break;
-      case 301:
-        // --blur-kern
-        if (!parse_conv_kern_lst(ps, optarg, ps->o.blur_kerns, MAX_BLUR_PASS))
-          exit(1);
-        break;
-      P_CASELONG(302, resize_damage);
-      P_CASEBOOL(303, glx_use_gpushader4);
-      case 304:
-        // --opacity-rule
-        if (!parse_rule_opacity(ps, optarg))
-          exit(1);
-        break;
-      case 305:
-        // --shadow-exclude-reg
-        if (!parse_geometry(ps, optarg, &ps->o.shadow_exclude_reg_geom))
-          exit(1);
-        break;
-      case 306:
-        // --paint-exclude
-        condlst_add(ps, &ps->o.paint_blacklist, optarg);
-        break;
-      P_CASEBOOL(307, xinerama_shadow_crop);
-      case 308:
-        // --unredir-if-possible-exclude
-        condlst_add(ps, &ps->o.unredir_if_possible_blacklist, optarg);
-        break;
-      P_CASELONG(309, unredir_if_possible_delay);
-      case 310:
-        // --write-pid-path
-        ps->o.write_pid_path = mstrcpy(optarg);
-        break;
-      P_CASEBOOL(311, vsync_use_glfinish);
-      P_CASEBOOL(312, xrender_sync);
-      P_CASEBOOL(313, xrender_sync_fence);
-      P_CASEBOOL(315, no_fading_destroyed_argb);
-      P_CASEBOOL(316, force_win_blend);
-      case 317:
-        ps->o.glx_fshader_win_str = mstrcpy(optarg);
-        break;
-      P_CASEBOOL(319, no_x_selection);
-      P_CASEBOOL(731, reredir_on_root_change);
-      P_CASEBOOL(732, glx_reinit_on_root_change);
-      default:
-        usage(1);
-        break;
+            // Short options
+            case 'h':
+                usage(0);
+                break;
+            case 'd':
+            case 'S':
+            case 314:
+            case 318:
+            case 320:
+                break;
+            P_CASELONG('D', fade_delta);
+            case 'I':
+                ps->o.fade_in_step = normalize_d(atof(optarg)) * OPAQUE;
+                break;
+            case 'O':
+                ps->o.fade_out_step = normalize_d(atof(optarg)) * OPAQUE;
+                break;
+            case 'c':
+                shadow_enable = true;
+                break;
+            case 'C':
+                cfgtmp.no_dock_shadow = true;
+                break;
+            case 'G':
+                cfgtmp.no_dnd_shadow = true;
+                break;
+            case 'm':
+                cfgtmp.menu_opacity = atof(optarg);
+                break;
+            case 'f':
+            case 'F':
+                fading_enable = true;
+                break;
+            P_CASELONG('r', shadow_radius);
+            case 'o':
+                ps->o.shadow_opacity = atof(optarg);
+                break;
+            P_CASELONG('l', shadow_offset_x);
+            P_CASELONG('t', shadow_offset_y);
+            case 'i':
+                ps->o.inactive_opacity = (normalize_d(atof(optarg)) * OPAQUE);
+                break;
+            case 'e':
+                ps->o.frame_opacity = atof(optarg);
+                break;
+            P_CASEBOOL('z', clear_shadow);
+            case 'n':
+            case 'a':
+            case 's':
+                LOG_ERROR("-n, -a, and -s have been removed.");
+                break;
+            P_CASEBOOL('b', fork_after_register);
+            // Long options
+            case 256:
+                // --config
+                break;
+            case 257:
+                // --shadow-red
+                ps->o.shadow_red = atof(optarg);
+                break;
+            case 258:
+                // --shadow-green
+                ps->o.shadow_green = atof(optarg);
+                break;
+            case 259:
+                // --shadow-blue
+                ps->o.shadow_blue = atof(optarg);
+                break;
+            P_CASEBOOL(260, inactive_opacity_override);
+            case 261:
+                // --inactive-dim
+                ps->o.inactive_dim = atof(optarg);
+                break;
+            P_CASEBOOL(262, mark_wmwin_focused);
+            case 263:
+                // --shadow-exclude
+                condlst_add(ps, &ps->o.shadow_blacklist, optarg);
+                break;
+            P_CASEBOOL(264, mark_ovredir_focused);
+            P_CASEBOOL(265, no_fading_openclose);
+            P_CASEBOOL(266, shadow_ignore_shaped);
+            P_CASEBOOL(267, detect_rounded_corners);
+            P_CASEBOOL(268, detect_client_opacity);
+            P_CASELONG(269, refresh_rate);
+            case 270:
+                // --vsync
+                if (!parse_vsync(ps, optarg)) {
+                    exit(1);
+                }
+                break;
+            case 271:
+                // --alpha-step
+                ps->o.alpha_step = atof(optarg);
+                break;
+            P_CASEBOOL(272, dbe);
+            P_CASEBOOL(273, paint_on_overlay);
+            P_CASEBOOL(274, sw_opti);
+            P_CASEBOOL(275, vsync_aggressive);
+            P_CASEBOOL(276, use_ewmh_active_win);
+            P_CASEBOOL(277, respect_prop_shadow);
+            P_CASEBOOL(278, unredir_if_possible);
+            case 279:
+                // --focus-exclude
+                condlst_add(ps, &ps->o.focus_blacklist, optarg);
+                break;
+            P_CASEBOOL(280, inactive_dim_fixed);
+            P_CASEBOOL(281, detect_transient);
+            P_CASEBOOL(282, detect_client_leader);
+            P_CASEBOOL(283, blur_background);
+            P_CASEBOOL(284, blur_background_frame);
+            P_CASEBOOL(285, blur_background_fixed);
+            P_CASEBOOL(286, dbus);
+            case 287:
+                // --logpath
+                ps->o.logpath = mstrcpy(optarg);
+                break;
+            case 288:
+                // --invert-color-include
+                condlst_add(ps, &ps->o.invert_color_list, optarg);
+                break;
+            case 289:
+                // --opengl
+                ps->o.backend = BKEND_GLX;
+                break;
+            case 290:
+                // --backend
+                if (!parse_backend(ps, optarg)) {
+                    exit(1);
+                }
+                break;
+            P_CASEBOOL(291, glx_no_stencil);
+            P_CASEBOOL(292, glx_copy_from_front);
+            P_CASELONG(293, benchmark);
+            case 294:
+                // --benchmark-wid
+                ps->o.benchmark_wid = strtol(optarg, NULL, 0);
+                break;
+            P_CASEBOOL(295, glx_use_copysubbuffermesa);
+            case 296:
+                // --blur-background-exclude
+                condlst_add(ps, &ps->o.blur_background_blacklist, optarg);
+                break;
+            case 297:
+                // --active-opacity
+                ps->o.active_opacity = (normalize_d(atof(optarg)) * OPAQUE);
+                break;
+            P_CASEBOOL(298, glx_no_rebind_pixmap);
+            case 299:
+                // --glx-swap-method
+                if (!parse_glx_swap_method(ps, optarg)) {
+                    exit(1);
+                }
+                break;
+            case 300:
+                // --fade-exclude
+                condlst_add(ps, &ps->o.fade_blacklist, optarg);
+                break;
+            case 301:
+                // --blur-kern
+                if (!parse_conv_kern_lst(ps, optarg, ps->o.blur_kerns, MAX_BLUR_PASS)) {
+                    exit(1);
+                }
+                break;
+            P_CASELONG(302, resize_damage);
+            P_CASEBOOL(303, glx_use_gpushader4);
+            case 304:
+                // --opacity-rule
+                if (!parse_rule_opacity(ps, optarg)) {
+                    exit(1);
+                }
+                break;
+            case 305:
+                // --shadow-exclude-reg
+                if (!parse_geometry(ps, optarg, &ps->o.shadow_exclude_reg_geom)) {
+                    exit(1);
+                }
+                break;
+            case 306:
+                // --paint-exclude
+                condlst_add(ps, &ps->o.paint_blacklist, optarg);
+                break;
+            P_CASEBOOL(307, xinerama_shadow_crop);
+            case 308:
+                // --unredir-if-possible-exclude
+                condlst_add(ps, &ps->o.unredir_if_possible_blacklist, optarg);
+                break;
+            P_CASELONG(309, unredir_if_possible_delay);
+            case 310:
+                // --write-pid-path
+                ps->o.write_pid_path = mstrcpy(optarg);
+                break;
+            P_CASEBOOL(311, vsync_use_glfinish);
+            P_CASEBOOL(312, xrender_sync);
+            P_CASEBOOL(313, xrender_sync_fence);
+            P_CASEBOOL(315, no_fading_destroyed_argb);
+            P_CASEBOOL(316, force_win_blend);
+            case 317:
+                ps->o.glx_fshader_win_str = mstrcpy(optarg);
+                break;
+            P_CASEBOOL(319, no_x_selection);
+            P_CASEBOOL(731, reredir_on_root_change);
+            P_CASEBOOL(732, glx_reinit_on_root_change);
+            default: {
+                usage(1);
+                break;
+            }
 #undef P_CASEBOOL
+        }
     }
-  }
 
-  // Restore LC_NUMERIC
-  setlocale(LC_NUMERIC, lc_numeric_old);
-  free(lc_numeric_old);
+    // Restore LC_NUMERIC
+    setlocale(LC_NUMERIC, lc_numeric_old);
+    free(lc_numeric_old);
 
-  // Range checking and option assignments
-  ps->o.fade_delta = max_i(ps->o.fade_delta, 1);
-  ps->o.shadow_radius = max_i(ps->o.shadow_radius, 1);
-  ps->o.shadow_red = normalize_d(ps->o.shadow_red);
-  ps->o.shadow_green = normalize_d(ps->o.shadow_green);
-  ps->o.shadow_blue = normalize_d(ps->o.shadow_blue);
-  ps->o.inactive_dim = normalize_d(ps->o.inactive_dim);
-  ps->o.frame_opacity = normalize_d(ps->o.frame_opacity);
-  ps->o.shadow_opacity = normalize_d(ps->o.shadow_opacity);
-  cfgtmp.menu_opacity = normalize_d(cfgtmp.menu_opacity);
-  ps->o.refresh_rate = normalize_i_range(ps->o.refresh_rate, 0, 300);
-  ps->o.alpha_step = normalize_d_range(ps->o.alpha_step, 0.01, 1.0);
-  if (OPAQUE == ps->o.inactive_opacity) {
-    ps->o.inactive_opacity = 0;
-  }
-  if (OPAQUE == ps->o.active_opacity) {
-    ps->o.active_opacity = 0;
-  }
-  if (shadow_enable)
-    wintype_arr_enable(ps->o.wintype_shadow);
-  ps->o.wintype_shadow[WINTYPE_DESKTOP] = false;
-  if (cfgtmp.no_dock_shadow)
-    ps->o.wintype_shadow[WINTYPE_DOCK] = false;
-  if (cfgtmp.no_dnd_shadow)
-    ps->o.wintype_shadow[WINTYPE_DND] = false;
-  if (fading_enable)
-    wintype_arr_enable(ps->o.wintype_fade);
-  if (1.0 != cfgtmp.menu_opacity) {
-    ps->o.wintype_opacity[WINTYPE_DROPDOWN_MENU] = cfgtmp.menu_opacity;
-    ps->o.wintype_opacity[WINTYPE_POPUP_MENU] = cfgtmp.menu_opacity;
-  }
-
-  // --blur-background-frame implies --blur-background
-  if (ps->o.blur_background_frame)
-    ps->o.blur_background = true;
-
-  if (ps->o.xrender_sync_fence)
-    ps->o.xrender_sync = true;
-
-  // Other variables determined by options
-
-  // Determine whether we need to track focus changes
-  if (ps->o.inactive_opacity || ps->o.active_opacity || ps->o.inactive_dim) {
-    ps->o.track_focus = true;
-  }
-
-  // Determine whether we track window grouping
-  if (ps->o.detect_transient || ps->o.detect_client_leader) {
-    ps->o.track_leader = true;
-  }
-
-  // Fill default blur kernel
-  if (ps->o.blur_background && !ps->o.blur_kerns[0]) {
-    // Convolution filter parameter (box blur)
-    // gaussian or binomial filters are definitely superior, yet looks
-    // like they aren't supported as of xorg-server-1.13.0
-    const static XFixed convolution_blur[] = {
-      // Must convert to XFixed with XDoubleToFixed()
-      // Matrix size
-      XDoubleToFixed(3), XDoubleToFixed(3),
-      // Matrix
-      XDoubleToFixed(1), XDoubleToFixed(1), XDoubleToFixed(1),
-      XDoubleToFixed(1), XDoubleToFixed(1), XDoubleToFixed(1),
-      XDoubleToFixed(1), XDoubleToFixed(1), XDoubleToFixed(1),
-    };
-    ps->o.blur_kerns[0] = malloc(sizeof(convolution_blur));
-    if (!ps->o.blur_kerns[0]) {
-      printf_errf("(): Failed to allocate memory for convolution kernel.");
-      exit(1);
+    // Range checking and option assignments
+    ps->o.fade_delta = max_i(ps->o.fade_delta, 1);
+    ps->o.shadow_radius = max_i(ps->o.shadow_radius, 1);
+    ps->o.shadow_red = normalize_d(ps->o.shadow_red);
+    ps->o.shadow_green = normalize_d(ps->o.shadow_green);
+    ps->o.shadow_blue = normalize_d(ps->o.shadow_blue);
+    ps->o.inactive_dim = normalize_d(ps->o.inactive_dim);
+    ps->o.frame_opacity = normalize_d(ps->o.frame_opacity);
+    ps->o.shadow_opacity = normalize_d(ps->o.shadow_opacity);
+    cfgtmp.menu_opacity = normalize_d(cfgtmp.menu_opacity);
+    ps->o.refresh_rate = normalize_i_range(ps->o.refresh_rate, 0, 300);
+    ps->o.alpha_step = normalize_d_range(ps->o.alpha_step, 0.01, 1.0);
+    if (OPAQUE == ps->o.inactive_opacity) {
+        ps->o.inactive_opacity = 0;
     }
-    memcpy(ps->o.blur_kerns[0], &convolution_blur, sizeof(convolution_blur));
-  }
+    if (OPAQUE == ps->o.active_opacity) {
+        ps->o.active_opacity = 0;
+    }
+    if (shadow_enable) {
+        wintype_arr_enable(ps->o.wintype_shadow);
+    }
+    ps->o.wintype_shadow[WINTYPE_DESKTOP] = false;
+    if (cfgtmp.no_dock_shadow) {
+        ps->o.wintype_shadow[WINTYPE_DOCK] = false;
+    }
 
-  rebuild_shadow_exclude_reg(ps);
+    if (cfgtmp.no_dnd_shadow) {
+        ps->o.wintype_shadow[WINTYPE_DND] = false;
+    }
 
-  if (ps->o.resize_damage < 0)
-    printf_errf("(): Negative --resize-damage does not work correctly.");
+    if (fading_enable) {
+        wintype_arr_enable(ps->o.wintype_fade);
+    }
+
+    if (1.0 != cfgtmp.menu_opacity) {
+        ps->o.wintype_opacity[WINTYPE_DROPDOWN_MENU] = cfgtmp.menu_opacity;
+        ps->o.wintype_opacity[WINTYPE_POPUP_MENU] = cfgtmp.menu_opacity;
+    }
+
+    // --blur-background-frame implies --blur-background
+    if (ps->o.blur_background_frame) {
+        ps->o.blur_background = true;
+    }
+
+    if (ps->o.xrender_sync_fence) {
+        ps->o.xrender_sync = true;
+    }
+
+    // Other variables determined by options
+    // Determine whether we need to track focus changes
+    if (ps->o.inactive_opacity || ps->o.active_opacity || ps->o.inactive_dim) {
+        ps->o.track_focus = true;
+    }
+
+    // Determine whether we track window grouping
+    if (ps->o.detect_transient || ps->o.detect_client_leader) {
+        ps->o.track_leader = true;
+    }
+
+    // Fill default blur kernel
+    if (ps->o.blur_background && !ps->o.blur_kerns[0]) {
+        // Convolution filter parameter (box blur)
+        // gaussian or binomial filters are definitely superior, yet looks
+        // like they aren't supported as of xorg-server-1.13.0
+        const static XFixed convolution_blur[] = {
+            // Must convert to XFixed with XDoubleToFixed()
+            // Matrix size
+            XDoubleToFixed(3), XDoubleToFixed(3),
+            // Matrix
+            XDoubleToFixed(1), XDoubleToFixed(1), XDoubleToFixed(1),
+            XDoubleToFixed(1), XDoubleToFixed(1), XDoubleToFixed(1),
+            XDoubleToFixed(1), XDoubleToFixed(1), XDoubleToFixed(1),
+        };
+
+        ps->o.blur_kerns[0] = malloc(sizeof(convolution_blur));
+        if (!ps->o.blur_kerns[0]) {
+            LOG_ERROR("Failed to allocate memory for convolution kernel.");
+            exit(1);
+        }
+        memcpy(ps->o.blur_kerns[0], &convolution_blur, sizeof(convolution_blur));
+    }
+
+    rebuild_shadow_exclude_reg(ps);
+
+    if (ps->o.resize_damage < 0) {
+        LOG_ERROR("Negative --resize-damage does not work correctly.");
+    }
 }
 
 /**
@@ -6830,85 +6866,87 @@ tmout_unredir_callback(session_t *ps, timeout_t *tmout) {
 /**
  * Main loop.
  */
-static bool
-mainloop(session_t *ps) {
-  // Don't miss timeouts even when we have a LOT of other events!
-  timeout_run(ps);
+static bool mainloop(session_t *ps)
+{
+    // Don't miss timeouts even when we have a LOT of other events!
+    timeout_run(ps);
 
-  // Process existing events
-  // Sometimes poll() returns 1 but no events are actually read,
-  // causing XNextEvent() to block, I have no idea what's wrong, so we
-  // check for the number of events here.
-  if (XEventsQueued(ps->dpy, QueuedAfterReading)) {
-    XEvent ev = { };
+    // Process existing events
+    // Sometimes poll() returns 1 but no events are actually read,
+    // causing XNextEvent() to block, I have no idea what's wrong, so we
+    // check for the number of events here.
+    if (XEventsQueued(ps->dpy, QueuedAfterReading)) {
+        XEvent ev = { };
 
-    XNextEvent(ps->dpy, &ev);
-    ev_handle(ps, &ev);
-    ps->ev_received = true;
+        XNextEvent(ps->dpy, &ev);
+        ev_handle(ps, &ev);
+        ps->ev_received = true;
 
-    return true;
-  }
+        return true;
+    }
 
 #ifdef CONFIG_DBUS
-  if (ps->o.dbus) {
-    cdbus_loop(ps);
-  }
+    if (ps->o.dbus) {
+        cdbus_loop(ps);
+    }
 #endif
 
-  if (ps->reset)
-    return false;
-
-  // Calculate timeout
-  struct timeval *ptv = NULL;
-  {
-    // Consider ev_received firstly
-    if (ps->ev_received || ps->o.benchmark) {
-      ptv = malloc(sizeof(struct timeval));
-      ptv->tv_sec = 0L;
-      ptv->tv_usec = 0L;
-    }
-    // Then consider fading timeout
-    else if (!ps->idling) {
-      ptv = malloc(sizeof(struct timeval));
-      *ptv = ms_to_tv(fade_timeout(ps));
+    if (ps->reset) {
+        return false;
     }
 
-    // Software optimization is to be applied on timeouts that require
-    // immediate painting only
-    if (ptv && ps->o.sw_opti)
-      swopti_handle_timeout(ps, ptv);
+    // Calculate timeout
+    struct timeval *ptv = NULL;
+    {
+        // Consider ev_received firstly
+        if (ps->ev_received || ps->o.benchmark) {
+            ptv = malloc(sizeof(struct timeval));
+            ptv->tv_sec = 0L;
+            ptv->tv_usec = 0L;
+        }
+        else if (!ps->idling) {
+            // Then consider fading timeout
+            ptv = malloc(sizeof(struct timeval));
+            *ptv = ms_to_tv(fade_timeout(ps));
+        }
 
-    // Don't continue looping for 0 timeout
-    if (ptv && timeval_isempty(ptv)) {
-      free(ptv);
-      return false;
+        // Software optimization is to be applied on timeouts that require
+        // immediate painting only
+        if (ptv && ps->o.sw_opti) {
+            swopti_handle_timeout(ps, ptv);
+        }
+
+        // Don't continue looping for 0 timeout
+        if (ptv && timeval_isempty(ptv)) {
+            free(ptv);
+            return false;
+        }
+
+        // Now consider the waiting time of other timeouts
+        time_ms_t tmout_ms = timeout_get_poll_time(ps);
+        if (tmout_ms < TIME_MS_MAX) {
+            if (!ptv) {
+                ptv = malloc(sizeof(struct timeval));
+                *ptv = ms_to_tv(tmout_ms);
+            }
+            else if (timeval_ms_cmp(ptv, tmout_ms) > 0) {
+                *ptv = ms_to_tv(tmout_ms);
+            }
+        }
+
+        // Don't continue looping for 0 timeout
+        if (ptv && timeval_isempty(ptv)) {
+            free(ptv);
+            return false;
+        }
     }
 
-    // Now consider the waiting time of other timeouts
-    time_ms_t tmout_ms = timeout_get_poll_time(ps);
-    if (tmout_ms < TIME_MS_MAX) {
-      if (!ptv) {
-        ptv = malloc(sizeof(struct timeval));
-        *ptv = ms_to_tv(tmout_ms);
-      }
-      else if (timeval_ms_cmp(ptv, tmout_ms) > 0) {
-        *ptv = ms_to_tv(tmout_ms);
-      }
-    }
+    // Polling
+    fds_poll(ps, ptv);
+    free(ptv);
+    ptv = NULL;
 
-    // Don't continue looping for 0 timeout
-    if (ptv && timeval_isempty(ptv)) {
-      free(ptv);
-      return false;
-    }
-  }
-
-  // Polling
-  fds_poll(ps, ptv);
-  free(ptv);
-  ptv = NULL;
-
-  return true;
+    return true;
 }
 
 static void
@@ -6943,519 +6981,519 @@ cxinerama_upd_scrs(session_t *ps) {
 
 static session_t* session_init(session_t *ps_old, int argc, char **argv)
 {
-  const static session_t s_def = {
-    .dpy = NULL,
-    .scr = 0,
-    .vis = NULL,
-    .depth = 0,
-    .root = None,
-    .root_height = 0,
-    .root_width = 0,
-    // .root_damage = None,
-    .overlay = None,
-    .root_tile_fill = false,
-    .root_tile_paint = PAINT_INIT,
-    .screen_reg = None,
-    .tgt_picture = None,
-    .tgt_buffer = PAINT_INIT,
-    .root_dbe = None,
-    .reg_win = None,
-    .o = {
-      .config_file = NULL,
-      .display = NULL,
-      .backend = BKEND_XRENDER,
-      .glx_no_stencil = false,
-      .glx_copy_from_front = false,
+    const static session_t s_def = {
+        .dpy = NULL,
+        .scr = 0,
+        .vis = NULL,
+        .depth = 0,
+        .root = None,
+        .root_height = 0,
+        .root_width = 0,
+//        .root_damage = None,
+        .overlay = None,
+        .root_tile_fill = false,
+        .root_tile_paint = PAINT_INIT,
+        .screen_reg = None,
+        .tgt_picture = None,
+        .tgt_buffer = PAINT_INIT,
+        .root_dbe = None,
+        .reg_win = None,
+        .o = {
+            .config_file = NULL,
+            .display = NULL,
+            .backend = BKEND_XRENDER,
+            .glx_no_stencil = false,
+            .glx_copy_from_front = false,
 #ifdef CONFIG_VSYNC_OPENGL_GLSL
-      .glx_prog_win = GLX_PROG_MAIN_INIT,
+            .glx_prog_win = GLX_PROG_MAIN_INIT,
 #endif
-      .mark_wmwin_focused = false,
-      .mark_ovredir_focused = false,
-      .fork_after_register = false,
-      .synchronize = false,
-      .detect_rounded_corners = false,
-      .paint_on_overlay = false,
-      .resize_damage = 0,
-      .unredir_if_possible = false,
-      .unredir_if_possible_blacklist = NULL,
-      .unredir_if_possible_delay = 0,
-      .redirected_force = UNSET,
-      .stoppaint_force = UNSET,
-      .dbus = false,
-      .benchmark = 0,
-      .benchmark_wid = None,
-      .logpath = NULL,
+            .mark_wmwin_focused = false,
+            .mark_ovredir_focused = false,
+            .fork_after_register = false,
+            .synchronize = false,
+            .detect_rounded_corners = false,
+            .paint_on_overlay = false,
+            .resize_damage = 0,
+            .unredir_if_possible = false,
+            .unredir_if_possible_blacklist = NULL,
+            .unredir_if_possible_delay = 0,
+            .redirected_force = UNSET,
+            .stoppaint_force = UNSET,
+            .dbus = false,
+            .benchmark = 0,
+            .benchmark_wid = None,
+            .logpath = NULL,
+            .refresh_rate = 0,
+            .sw_opti = false,
+            .vsync = VSYNC_NONE,
+            .dbe = false,
+            .vsync_aggressive = false,
 
-      .refresh_rate = 0,
-      .sw_opti = false,
-      .vsync = VSYNC_NONE,
-      .dbe = false,
-      .vsync_aggressive = false,
+            .wintype_shadow = { false },
+            .shadow_red = 0.0,
+            .shadow_green = 0.0,
+            .shadow_blue = 0.0,
+            .shadow_radius = 12,
+            .shadow_offset_x = -15,
+            .shadow_offset_y = -15,
+            .shadow_opacity = .75,
+            .clear_shadow = false,
+            .shadow_blacklist = NULL,
+            .shadow_ignore_shaped = false,
+            .respect_prop_shadow = false,
+            .xinerama_shadow_crop = false,
 
-      .wintype_shadow = { false },
-      .shadow_red = 0.0,
-      .shadow_green = 0.0,
-      .shadow_blue = 0.0,
-      .shadow_radius = 12,
-      .shadow_offset_x = -15,
-      .shadow_offset_y = -15,
-      .shadow_opacity = .75,
-      .clear_shadow = false,
-      .shadow_blacklist = NULL,
-      .shadow_ignore_shaped = false,
-      .respect_prop_shadow = false,
-      .xinerama_shadow_crop = false,
+            .wintype_fade = { false },
+            .fade_in_step = 0.028 * OPAQUE,
+            .fade_out_step = 0.03 * OPAQUE,
+            .fade_delta = 10,
+            .no_fading_openclose = false,
+            .no_fading_destroyed_argb = false,
+            .fade_blacklist = NULL,
 
-      .wintype_fade = { false },
-      .fade_in_step = 0.028 * OPAQUE,
-      .fade_out_step = 0.03 * OPAQUE,
-      .fade_delta = 10,
-      .no_fading_openclose = false,
-      .no_fading_destroyed_argb = false,
-      .fade_blacklist = NULL,
+            .wintype_opacity = { 0.0 },
+            .inactive_opacity = 0,
+            .inactive_opacity_override = false,
+            .active_opacity = 0,
+            .frame_opacity = 0.0,
+            .detect_client_opacity = false,
+            .alpha_step = 0.03,
 
-      .wintype_opacity = { 0.0 },
-      .inactive_opacity = 0,
-      .inactive_opacity_override = false,
-      .active_opacity = 0,
-      .frame_opacity = 0.0,
-      .detect_client_opacity = false,
-      .alpha_step = 0.03,
+            .blur_background = false,
+            .blur_background_frame = false,
+            .blur_background_fixed = false,
+            .blur_background_blacklist = NULL,
+            .blur_kerns = { NULL },
+            .inactive_dim = 0.0,
+            .inactive_dim_fixed = false,
+            .invert_color_list = NULL,
+            .opacity_rules = NULL,
 
-      .blur_background = false,
-      .blur_background_frame = false,
-      .blur_background_fixed = false,
-      .blur_background_blacklist = NULL,
-      .blur_kerns = { NULL },
-      .inactive_dim = 0.0,
-      .inactive_dim_fixed = false,
-      .invert_color_list = NULL,
-      .opacity_rules = NULL,
+            .wintype_focus = { false },
+            .use_ewmh_active_win = false,
+            .focus_blacklist = NULL,
+            .detect_transient = false,
+            .detect_client_leader = false,
 
-      .wintype_focus = { false },
-      .use_ewmh_active_win = false,
-      .focus_blacklist = NULL,
-      .detect_transient = false,
-      .detect_client_leader = false,
+            .track_focus = false,
+            .track_wdata = false,
+            .track_leader = false,
+        },
+        .pfds_read = NULL,
+        .pfds_write = NULL,
+        .pfds_except = NULL,
+        .nfds_max = 0,
+        .tmout_lst = NULL,
 
-      .track_focus = false,
-      .track_wdata = false,
-      .track_leader = false,
-    },
+        .all_damage = None,
+        .all_damage_last = { None },
+        .time_start = { 0, 0 },
+        .redirected = false,
+        .alpha_picts = NULL,
+        .reg_ignore_expire = false,
+        .idling = false,
+        .fade_time = 0L,
+        .ignore_head = NULL,
+        .ignore_tail = NULL,
+        .reset = false,
 
-    .pfds_read = NULL,
-    .pfds_write = NULL,
-    .pfds_except = NULL,
-    .nfds_max = 0,
-    .tmout_lst = NULL,
+        .expose_rects = NULL,
+        .size_expose = 0,
+        .n_expose = 0,
 
-    .all_damage = None,
-    .all_damage_last = { None },
-    .time_start = { 0, 0 },
-    .redirected = false,
-    .alpha_picts = NULL,
-    .reg_ignore_expire = false,
-    .idling = false,
-    .fade_time = 0L,
-    .ignore_head = NULL,
-    .ignore_tail = NULL,
-    .reset = false,
+        .list = NULL,
+        .active_win = NULL,
+        .active_leader = None,
 
-    .expose_rects = NULL,
-    .size_expose = 0,
-    .n_expose = 0,
+        .black_picture = None,
+        .cshadow_picture = None,
+        .white_picture = None,
+        .gaussian_map = NULL,
+        .cgsize = 0,
+        .shadow_corner = NULL,
+        .shadow_top = NULL,
 
-    .list = NULL,
-    .active_win = NULL,
-    .active_leader = None,
-
-    .black_picture = None,
-    .cshadow_picture = None,
-    .white_picture = None,
-    .gaussian_map = NULL,
-    .cgsize = 0,
-    .shadow_corner = NULL,
-    .shadow_top = NULL,
-
-    .refresh_rate = 0,
-    .refresh_intv = 0UL,
-    .paint_tm_offset = 0L,
+        .refresh_rate = 0,
+        .refresh_intv = 0UL,
+        .paint_tm_offset = 0L,
 
 #ifdef CONFIG_VSYNC_DRM
-    .drm_fd = -1,
+        .drm_fd = -1,
 #endif
-
-    .xfixes_event = 0,
-    .xfixes_error = 0,
-    .damage_event = 0,
-    .damage_error = 0,
-    .render_event = 0,
-    .render_error = 0,
-    .composite_event = 0,
-    .composite_error = 0,
-    .composite_opcode = 0,
-    .has_name_pixmap = false,
-    .shape_exists = false,
-    .shape_event = 0,
-    .shape_error = 0,
-    .randr_exists = 0,
-    .randr_event = 0,
-    .randr_error = 0,
+        .xfixes_event = 0,
+        .xfixes_error = 0,
+        .damage_event = 0,
+        .damage_error = 0,
+        .render_event = 0,
+        .render_error = 0,
+        .composite_event = 0,
+        .composite_error = 0,
+        .composite_opcode = 0,
+        .has_name_pixmap = false,
+        .shape_exists = false,
+        .shape_event = 0,
+        .shape_error = 0,
+        .randr_exists = 0,
+        .randr_event = 0,
+        .randr_error = 0,
 #ifdef CONFIG_VSYNC_OPENGL
-    .glx_exists = false,
-    .glx_event = 0,
-    .glx_error = 0,
+        .glx_exists = false,
+        .glx_event = 0,
+        .glx_error = 0,
 #endif
-    .dbe_exists = false,
-    .xrfilter_convolution_exists = false,
+        .dbe_exists = false,
+        .xrfilter_convolution_exists = false,
 
-    .atom_opacity = None,
-    .atom_frame_extents = None,
-    .atom_client = None,
-    .atom_name = None,
-    .atom_name_ewmh = None,
-    .atom_class = None,
-    .atom_role = None,
-    .atom_transient = None,
-    .atom_ewmh_active_win = None,
-    .atom_compton_shadow = None,
-    .atom_win_type = None,
-    .atoms_wintypes = { 0 },
-    .track_atom_lst = NULL,
+        .atom_opacity = None,
+        .atom_frame_extents = None,
+        .atom_client = None,
+        .atom_name = None,
+        .atom_name_ewmh = None,
+        .atom_class = None,
+        .atom_role = None,
+        .atom_transient = None,
+        .atom_ewmh_active_win = None,
+        .atom_compton_shadow = None,
+        .atom_win_type = None,
+        .atoms_wintypes = { 0 },
+        .track_atom_lst = NULL,
 
 #ifdef CONFIG_DBUS
-    .dbus_conn = NULL,
-    .dbus_service = NULL,
+        .dbus_conn = NULL,
+        .dbus_service = NULL,
 #endif
-  };
+    };
 
-  // Allocate a session and copy default values into it
-  session_t *ps = malloc(sizeof(session_t));
-  memcpy(ps, &s_def, sizeof(session_t));
-  ps_g = ps;
-  ps->ignore_tail = &ps->ignore_head;
-  gettimeofday(&ps->time_start, NULL);
+    // Allocate a session and copy default values into it
+    session_t *ps = malloc(sizeof(session_t));
+    if (!ps) {
+        LOG_ERROR("malloc error")
+        return NULL;
+    }
+    memcpy(ps, &s_def, sizeof(session_t));
+    ps_g = ps;
+    ps->ignore_tail = &ps->ignore_head;
+    gettimeofday(&ps->time_start, NULL);
 
-  wintype_arr_enable(ps->o.wintype_focus);
-  ps->o.wintype_focus[WINTYPE_UNKNOWN] = false;
-  ps->o.wintype_focus[WINTYPE_NORMAL] = false;
-  ps->o.wintype_focus[WINTYPE_UTILITY] = false;
+    wintype_arr_enable(ps->o.wintype_focus);
+    ps->o.wintype_focus[WINTYPE_UNKNOWN] = false;
+    ps->o.wintype_focus[WINTYPE_NORMAL] = false;
+    ps->o.wintype_focus[WINTYPE_UTILITY] = false;
 
-  // First pass
-  get_cfg(ps, argc, argv, true);
+    // First pass
+    get_cfg(ps, argc, argv, true);
 
-  // Inherit old Display if possible, primarily for resource leak checking
-  if (ps_old && ps_old->dpy)
-    ps->dpy = ps_old->dpy;
+    // Inherit old Display if possible, primarily for resource leak checking
+    if (ps_old && ps_old->dpy) {
+        ps->dpy = ps_old->dpy;
+    }
 
-  // Open Display
-  if (!ps->dpy) {
-    ps->dpy = XOpenDisplay(ps->o.display);
+    // Open Display
     if (!ps->dpy) {
-      printf_errfq(1, "(): Can't open display.");
+        ps->dpy = XOpenDisplay(ps->o.display);
+        if (!ps->dpy) {
+            LOG_ERROR("Can't open display.");
+        }
     }
-  }
 
-  XSetErrorHandler(xerror);
-  if (ps->o.synchronize) {
-    XSynchronize(ps->dpy, 1);
-  }
-
-  ps->scr = DefaultScreen(ps->dpy);
-  ps->root = RootWindow(ps->dpy, ps->scr);
-
-  ps->vis = DefaultVisual(ps->dpy, ps->scr);
-  ps->depth = DefaultDepth(ps->dpy, ps->scr);
-
-  // Start listening to events on root earlier to catch all possible
-  // root geometry changes
-  XSelectInput(ps->dpy, ps->root,
-    SubstructureNotifyMask
-    | ExposureMask
-    | StructureNotifyMask
-    | PropertyChangeMask);
-  XFlush(ps->dpy);
-
-  ps->root_width = DisplayWidth(ps->dpy, ps->scr);
-  ps->root_height = DisplayHeight(ps->dpy, ps->scr);
-
-  if (!XRenderQueryExtension(ps->dpy,
-        &ps->render_event, &ps->render_error)) {
-    fprintf(stderr, "No render extension\n");
-    exit(1);
-  }
-
-  if (!XQueryExtension(ps->dpy, COMPOSITE_NAME, &ps->composite_opcode,
-        &ps->composite_event, &ps->composite_error)) {
-    fprintf(stderr, "No composite extension\n");
-    exit(1);
-  }
-
-  {
-    int composite_major = 0, composite_minor = 0;
-
-    XCompositeQueryVersion(ps->dpy, &composite_major, &composite_minor);
-
-    if (!ps->o.no_name_pixmap
-        && (composite_major > 0 || composite_minor >= 2)) {
-      ps->has_name_pixmap = true;
+    XSetErrorHandler(xerror);
+    if (ps->o.synchronize) {
+        XSynchronize(ps->dpy, 1);
     }
-  }
 
-  if (!XDamageQueryExtension(ps->dpy, &ps->damage_event, &ps->damage_error)) {
-    fprintf(stderr, "No damage extension\n");
-    exit(1);
-  }
+    ps->scr = DefaultScreen(ps->dpy);
+    ps->root = RootWindow(ps->dpy, ps->scr);
 
-  if (!XFixesQueryExtension(ps->dpy, &ps->xfixes_event, &ps->xfixes_error)) {
-    fprintf(stderr, "No XFixes extension\n");
-    exit(1);
-  }
+    ps->vis = DefaultVisual(ps->dpy, ps->scr);
+    ps->depth = DefaultDepth(ps->dpy, ps->scr);
 
-  // Build a safe representation of display name
-  {
-    char *display_repr = DisplayString(ps->dpy);
-    if (!display_repr)
-      display_repr = "unknown";
-    display_repr = mstrcpy(display_repr);
+    // Start listening to events on root earlier to catch all possible
+    // root geometry changes
+    XSelectInput(ps->dpy, ps->root, SubstructureNotifyMask | ExposureMask | StructureNotifyMask | PropertyChangeMask);
+    XFlush(ps->dpy);
 
-    // Convert all special characters in display_repr name to underscore
+    ps->root_width = DisplayWidth(ps->dpy, ps->scr);
+    ps->root_height = DisplayHeight(ps->dpy, ps->scr);
+
+    if (!XRenderQueryExtension(ps->dpy, &ps->render_event, &ps->render_error)) {
+        LOG_ERROR("No render extension");
+        exit(1);
+    }
+
+    if (!XQueryExtension(ps->dpy, COMPOSITE_NAME, &ps->composite_opcode, &ps->composite_event, &ps->composite_error)) {
+        LOG_ERROR("No composite extension");
+        exit(1);
+    }
+
     {
-      char *pdisp = display_repr;
-
-      while (*pdisp) {
-        if (!isalnum(*pdisp))
-          *pdisp = '_';
-        ++pdisp;
-      }
+        int composite_major = 0, composite_minor = 0;
+        XCompositeQueryVersion(ps->dpy, &composite_major, &composite_minor);
+        if (!ps->o.no_name_pixmap && (composite_major > 0 || composite_minor >= 2)) {
+            ps->has_name_pixmap = true;
+        }
     }
 
-    ps->o.display_repr = display_repr;
-  }
+    if (!XDamageQueryExtension(ps->dpy, &ps->damage_event, &ps->damage_error)) {
+        LOG_ERROR("No damage extension");
+        exit(1);
+    }
 
-  // Second pass
-  get_cfg(ps, argc, argv, false);
+    if (!XFixesQueryExtension(ps->dpy, &ps->xfixes_event, &ps->xfixes_error)) {
+        LOG_ERROR("No XFixes extension");
+        exit(1);
+    }
 
-  // Query X Shape
-  if (XShapeQueryExtension(ps->dpy, &ps->shape_event, &ps->shape_error)) {
-    ps->shape_exists = true;
-  }
+    // Build a safe representation of display name
+    {
+        char *display_repr = DisplayString(ps->dpy);
+        if (!display_repr) {
+            display_repr = "unknown";
+        }
+        display_repr = mstrcpy(display_repr);
 
-  if (ps->o.xrender_sync_fence) {
+        // Convert all special characters in display_repr name to underscore
+        {
+            char *pdisp = display_repr;
+            while (*pdisp) {
+                if (!isalnum(*pdisp)) {
+                    *pdisp = '_';
+                }
+                ++pdisp;
+            }
+        }
+        ps->o.display_repr = display_repr;
+    }
+
+    // Second pass
+    get_cfg(ps, argc, argv, false);
+
+    // Query X Shape
+    if (XShapeQueryExtension(ps->dpy, &ps->shape_event, &ps->shape_error)) {
+        ps->shape_exists = true;
+    }
+
+    if (ps->o.xrender_sync_fence) {
 #ifdef CONFIG_XSYNC
-    // Query X Sync
-    if (XSyncQueryExtension(ps->dpy, &ps->xsync_event, &ps->xsync_error)) {
-      // TODO: Fencing may require version >= 3.0?
-      int major_version_return = 0, minor_version_return = 0;
-      if (XSyncInitialize(ps->dpy, &major_version_return, &minor_version_return))
-        ps->xsync_exists = true;
-    }
-    if (!ps->xsync_exists) {
-      printf_errf("(): X Sync extension not found. No X Sync fence sync is "
-          "possible.");
-      exit(1);
-    }
+        // Query X Sync
+        if (XSyncQueryExtension(ps->dpy, &ps->xsync_event, &ps->xsync_error)) {
+            // TODO: Fencing may require version >= 3.0?
+            int major_version_return = 0, minor_version_return = 0;
+            if (XSyncInitialize(ps->dpy, &major_version_return, &minor_version_return)) {
+                ps->xsync_exists = true;
+            }
+        }
+
+        if (!ps->xsync_exists) {
+            LOG_ERROR("X Sync extension not found. No X Sync fence sync is possible.");
+            exit(1);
+        }
 #else
-    printf_errf("(): X Sync support not compiled in. --xrender-sync-fence "
-        "can't work.");
-    exit(1);
+        LOG_ERROR("X Sync support not compiled in. --xrender-sync-fence can't work.");
+        exit(1);
 #endif
-  }
-
-  // Query X RandR
-  if ((ps->o.sw_opti && !ps->o.refresh_rate) || ps->o.xinerama_shadow_crop) {
-    if (XRRQueryExtension(ps->dpy, &ps->randr_event, &ps->randr_error))
-      ps->randr_exists = true;
-    else
-      printf_errf("(): No XRandR extension, automatic screen change "
-          "detection impossible.");
-  }
-
-  // Query X DBE extension
-  if (ps->o.dbe) {
-    int dbe_ver_major = 0, dbe_ver_minor = 0;
-    if (XdbeQueryExtension(ps->dpy, &dbe_ver_major, &dbe_ver_minor))
-      if (dbe_ver_major >= 1)
-        ps->dbe_exists = true;
-      else
-        fprintf(stderr, "DBE extension version too low. Double buffering "
-            "impossible.\n");
-    else {
-      fprintf(stderr, "No DBE extension. Double buffering impossible.\n");
     }
-    if (!ps->dbe_exists)
-      ps->o.dbe = false;
-  }
 
-  // Query X Xinerama extension
-  if (ps->o.xinerama_shadow_crop) {
+    // Query X RandR
+    if ((ps->o.sw_opti && !ps->o.refresh_rate) || ps->o.xinerama_shadow_crop) {
+        if (XRRQueryExtension(ps->dpy, &ps->randr_event, &ps->randr_error)) {
+            ps->randr_exists = true;
+        }
+        else {
+            LOG_ERROR("No XRandR extension, automatic screen change detection impossible.");
+        }
+    }
+
+    // Query X DBE extension
+    if (ps->o.dbe) {
+        int dbe_ver_major = 0, dbe_ver_minor = 0;
+        if (XdbeQueryExtension(ps->dpy, &dbe_ver_major, &dbe_ver_minor)) {
+            if (dbe_ver_major >= 1) {
+                ps->dbe_exists = true;
+            }
+            else {
+                LOG_ERROR("DBE extension version too low. Double buffering impossible.");
+            }
+        }
+        else {
+            LOG_ERROR("No DBE extension. Double buffering impossible.");
+        }
+        if (!ps->dbe_exists) {
+            ps->o.dbe = false;
+        }
+    }
+
+    // Query X Xinerama extension
+    if (ps->o.xinerama_shadow_crop) {
 #ifdef CONFIG_XINERAMA
-    int xinerama_event = 0, xinerama_error = 0;
-    if (XineramaQueryExtension(ps->dpy, &xinerama_event, &xinerama_error))
-      ps->xinerama_exists = true;
+        int xinerama_event = 0, xinerama_error = 0;
+        if (XineramaQueryExtension(ps->dpy, &xinerama_event, &xinerama_error)) {
+            ps->xinerama_exists = true;
+        }
 #else
-    printf_errf("(): Xinerama support not compiled in.");
+        LOG_ERROR("Xinerama support not compiled in.");
 #endif
-  }
+    }
 
-  rebuild_screen_reg(ps);
+    rebuild_screen_reg(ps);
 
-  // Overlay must be initialized before double buffer, and before creation
-  // of OpenGL context.
-  if (ps->o.paint_on_overlay)
-    init_overlay(ps);
-
-  // Initialize DBE
-  if (ps->o.dbe && BKEND_XRENDER != ps->o.backend) {
-    printf_errf("(): DBE couldn't be used on GLX backend.");
-    ps->o.dbe = false;
-  }
-
-  if (ps->o.dbe && !init_dbe(ps))
-    exit(1);
-
-  // Initialize OpenGL as early as possible
-  if (bkend_use_glx(ps)) {
-#ifdef CONFIG_VSYNC_OPENGL
-    if (!glx_init(ps, true))
-      exit(1);
-#else
-    printf_errfq(1, "(): GLX backend support not compiled in.");
-#endif
-  }
-
-  // Initialize window GL shader
-  if (BKEND_GLX == ps->o.backend && ps->o.glx_fshader_win_str) {
-#ifdef CONFIG_VSYNC_OPENGL_GLSL
-    if (!glx_load_prog_main(ps, NULL, ps->o.glx_fshader_win_str, &ps->o.glx_prog_win))
-      exit(1);
-#else
-    printf_errf("(): GLSL supported not compiled in, can't load shader.");
-    exit(1);
-#endif
-  }
-
-  // Initialize software optimization
-  if (ps->o.sw_opti)
-    ps->o.sw_opti = swopti_init(ps);
-
-  // Monitor screen changes if vsync_sw is enabled and we are using
-  // an auto-detected refresh rate, or when Xinerama features are enabled
-  if (ps->randr_exists && ((ps->o.sw_opti && !ps->o.refresh_rate)
-        || ps->o.xinerama_shadow_crop))
-    XRRSelectInput(ps->dpy, ps->root, RRScreenChangeNotifyMask);
-
-  // Initialize VSync
-  if (!vsync_init(ps))
-    exit(1);
-
-  cxinerama_upd_scrs(ps);
-
-  // Create registration window
-  if (!ps->reg_win && !register_cm(ps))
-    exit(1);
-
-  init_atoms(ps);
-  init_alpha_picts(ps);
-
-  ps->gaussian_map = make_gaussian_map(ps->o.shadow_radius);
-  presum_gaussian(ps, ps->gaussian_map);
-
-  {
-    XRenderPictureAttributes pa;
-    pa.subwindow_mode = IncludeInferiors;
-
-    ps->root_picture = XRenderCreatePicture(ps->dpy, ps->root,
-        XRenderFindVisualFormat(ps->dpy, ps->vis),
-        CPSubwindowMode, &pa);
+    // Overlay must be initialized before double buffer, and before creation of OpenGL context.
     if (ps->o.paint_on_overlay) {
-      ps->tgt_picture = XRenderCreatePicture(ps->dpy, ps->overlay,
-          XRenderFindVisualFormat(ps->dpy, ps->vis),
-          CPSubwindowMode, &pa);
+        init_overlay(ps);
+    }
+
+    // Initialize DBE
+    if (ps->o.dbe && BKEND_XRENDER != ps->o.backend) {
+        LOG_ERROR("DBE couldn't be used on GLX backend.");
+        ps->o.dbe = false;
+    }
+
+    if (ps->o.dbe && !init_dbe(ps)) {
+        exit(1);
+    }
+
+    // Initialize OpenGL as early as possible
+    if (bkend_use_glx(ps)) {
+#ifdef CONFIG_VSYNC_OPENGL
+        if (!glx_init(ps, true)) {
+            exit(1);
+        }
+#else
+        LOG_ERROR("GLX backend support not compiled in.");
+#endif
+    }
+
+    // Initialize window GL shader
+    if (BKEND_GLX == ps->o.backend && ps->o.glx_fshader_win_str) {
+#ifdef CONFIG_VSYNC_OPENGL_GLSL
+        if (!glx_load_prog_main(ps, NULL, ps->o.glx_fshader_win_str, &ps->o.glx_prog_win)) {
+            exit(1);
+        }
+#else
+        LOG_ERROR("GLSL supported not compiled in, can't load shader.");
+        exit(1);
+#endif
+    }
+
+    // Initialize software optimization
+    if (ps->o.sw_opti) {
+        ps->o.sw_opti = swopti_init(ps);
+    }
+
+    // Monitor screen changes if vsync_sw is enabled and we are using
+    // an auto-detected refresh rate, or when Xinerama features are enabled
+    if (ps->randr_exists && ((ps->o.sw_opti && !ps->o.refresh_rate) || ps->o.xinerama_shadow_crop)) {
+        XRRSelectInput(ps->dpy, ps->root, RRScreenChangeNotifyMask);
+    }
+
+    // Initialize VSync
+    if (!vsync_init(ps)) {
+        exit(1);
+    }
+
+    cxinerama_upd_scrs(ps);
+
+    // Create registration window
+    if (!ps->reg_win && !register_cm(ps)) {
+        exit(1);
+    }
+
+    init_atoms(ps);
+    init_alpha_picts(ps);
+
+    ps->gaussian_map = make_gaussian_map(ps->o.shadow_radius);
+    presum_gaussian(ps, ps->gaussian_map);
+
+    {
+        XRenderPictureAttributes pa;
+        pa.subwindow_mode = IncludeInferiors;
+
+        ps->root_picture = XRenderCreatePicture (ps->dpy, ps->root, XRenderFindVisualFormat (ps->dpy, ps->vis), CPSubwindowMode, &pa);
+        if (ps->o.paint_on_overlay) {
+            ps->tgt_picture = XRenderCreatePicture (ps->dpy, ps->overlay, XRenderFindVisualFormat (ps->dpy, ps->vis), CPSubwindowMode, &pa);
+        }
+        else {
+            ps->tgt_picture = ps->root_picture;
+        }
+    }
+
+    // Initialize filters, must be preceded by OpenGL context creation
+    if (!init_filters(ps)) {
+        exit(1);
+    }
+
+    ps->black_picture = solid_picture(ps, true, 1, 0, 0, 0);
+    ps->white_picture = solid_picture(ps, true, 1, 1, 1, 1);
+
+    // Generates another Picture for shadows if the color is modified by user
+    if (!ps->o.shadow_red && !ps->o.shadow_green && !ps->o.shadow_blue) {
+        ps->cshadow_picture = ps->black_picture;
     }
     else {
-      ps->tgt_picture = ps->root_picture;
-    }
-  }
-
-  // Initialize filters, must be preceded by OpenGL context creation
-  if (!init_filters(ps))
-    exit(1);
-
-  ps->black_picture = solid_picture(ps, true, 1, 0, 0, 0);
-  ps->white_picture = solid_picture(ps, true, 1, 1, 1, 1);
-
-  // Generates another Picture for shadows if the color is modified by
-  // user
-  if (!ps->o.shadow_red && !ps->o.shadow_green && !ps->o.shadow_blue) {
-    ps->cshadow_picture = ps->black_picture;
-  } else {
-    ps->cshadow_picture = solid_picture(ps, true, 1,
-        ps->o.shadow_red, ps->o.shadow_green, ps->o.shadow_blue);
-  }
-
-  fds_insert(ps, ConnectionNumber(ps->dpy), POLLIN);
-  ps->tmout_unredir = timeout_insert(ps, ps->o.unredir_if_possible_delay,
-      tmout_unredir_callback, NULL);
-  ps->tmout_unredir->enabled = false;
-
-  XGrabServer(ps->dpy);
-
-  {
-    Window root_return, parent_return;
-    Window *children;
-    unsigned int nchildren;
-
-    XQueryTree(ps->dpy, ps->root, &root_return,
-      &parent_return, &children, &nchildren);
-
-    for (unsigned i = 0; i < nchildren; i++) {
-      add_win(ps, children[i], i ? children[i-1] : None);
+        ps->cshadow_picture = solid_picture(ps, true, 1, ps->o.shadow_red, ps->o.shadow_green, ps->o.shadow_blue);
     }
 
-    cxfree(children);
-  }
+    fds_insert(ps, ConnectionNumber(ps->dpy), POLLIN);
+    ps->tmout_unredir = timeout_insert(ps, ps->o.unredir_if_possible_delay, tmout_unredir_callback, NULL);
+    ps->tmout_unredir->enabled = false;
 
-  if (ps->o.track_focus) {
-    recheck_focus(ps);
-  }
+    XGrabServer(ps->dpy);
 
-  XUngrabServer(ps->dpy);
-  // ALWAYS flush after XUngrabServer()!
-  XFlush(ps->dpy);
+    {
+        Window root_return, parent_return;
+        Window *children;
+        unsigned int nchildren;
 
-  // Initialize DBus
-  if (ps->o.dbus) {
+        XQueryTree(ps->dpy, ps->root, &root_return, &parent_return, &children, &nchildren);
+
+        for (unsigned i = 0; i < nchildren; i++) {
+            add_win(ps, children[i], i ? children[i-1] : None);
+        }
+
+        cxfree(children);
+    }
+
+    if (ps->o.track_focus) {
+        recheck_focus(ps);
+    }
+
+    XUngrabServer(ps->dpy);
+    // ALWAYS flush after XUngrabServer()!
+    XFlush(ps->dpy);
+
+    // Initialize DBus
+    if (ps->o.dbus) {
 #ifdef CONFIG_DBUS
-    cdbus_init(ps);
-    if (!ps->dbus_conn) {
-      cdbus_destroy(ps);
-      ps->o.dbus = false;
-    }
+        cdbus_init(ps);
+        if (!ps->dbus_conn) {
+            cdbus_destroy(ps);
+            ps->o.dbus = false;
+        }
 #else
-    printf_errfq(1, "(): DBus support not compiled in!");
+        LOG_ERROR("DBus support not compiled in!");
 #endif
-  }
-
-  // Fork to background, if asked
-  if (ps->o.fork_after_register) {
-    if (!fork_after(ps)) {
-      session_destroy(ps);
-      return NULL;
     }
-  }
 
-  // Redirect output stream
-  if (ps->o.fork_after_register || ps->o.logpath)
-    ostream_reopen(ps, NULL);
+    // Fork to background, if asked
+    if (ps->o.fork_after_register) {
+        if (!fork_after(ps)) {
+            session_destroy(ps);
+            return NULL;
+        }
+    }
 
-  write_pid(ps);
+    // Redirect output stream
+    if (ps->o.fork_after_register || ps->o.logpath) {
+        ostream_reopen(ps, NULL);
+    }
 
-  // Free the old session
-  if (ps_old)
-    free(ps_old);
+    write_pid(ps);
 
-  return ps;
+    // Free the old session
+    if (ps_old) {
+        free(ps_old);
+    }
+
+    return ps;
 }
 
 /**
@@ -7655,72 +7693,79 @@ dump_img(session_t *ps) {
  */
 static void session_run(session_t *ps)
 {
-  win *t;
+    win *t;
 
-  if (ps->o.sw_opti)
-    ps->paint_tm_offset = get_time_timeval().tv_usec;
-
-  ps->reg_ignore_expire = true;
-
-  t = paint_preprocess(ps, ps->list);
-
-  if (ps->redirected)
-    paint_all(ps, None, None, t);
-
-  // Initialize idling
-  ps->idling = false;
-
-  // Main loop
-  while (!ps->reset) {
-    ps->ev_received = false;
-
-    while (mainloop(ps))
-      continue;
-
-    if (ps->o.benchmark) {
-      if (ps->o.benchmark_wid) {
-        win *w = find_win(ps, ps->o.benchmark_wid);
-        if (!w) {
-          printf_errf("(): Couldn't find specified benchmark window.");
-          session_destroy(ps);
-          exit(1);
-        }
-        add_damage_win(ps, w);
-      }
-      else {
-        force_repaint(ps);
-      }
+    if (ps->o.sw_opti) {
+        ps->paint_tm_offset = get_time_timeval().tv_usec;
     }
 
-    // idling will be turned off during paint_preprocess() if needed
-    ps->idling = true;
+    ps->reg_ignore_expire = true;
 
     t = paint_preprocess(ps, ps->list);
-    ps->tmout_unredir_hit = false;
 
-    // If the screen is unredirected, free all_damage to stop painting
-    if (!ps->redirected || ON == ps->o.stoppaint_force)
-      free_region(ps, &ps->all_damage);
-
-    XserverRegion all_damage_orig = None;
-    if (ps->o.resize_damage > 0)
-      all_damage_orig = copy_region(ps, ps->all_damage);
-    resize_region(ps, ps->all_damage, ps->o.resize_damage);
-    if (ps->all_damage && !is_region_empty(ps, ps->all_damage, NULL)) {
-      static int paint = 0;
-      paint_all(ps, ps->all_damage, all_damage_orig, t);
-      ps->reg_ignore_expire = false;
-      paint++;
-      if (ps->o.benchmark && paint >= ps->o.benchmark)
-        exit(0);
-      XSync(ps->dpy, False);
-      ps->all_damage = None;
+    if (ps->redirected) {
+        paint_all(ps, None, None, t);
     }
-    free_region(ps, &all_damage_orig);
 
-    if (ps->idling)
-      ps->fade_time = 0L;
-  }
+    // Initialize idling
+    ps->idling = false;
+
+    // Main loop
+    while (!ps->reset) {
+        ps->ev_received = false;
+
+        while (mainloop(ps)) {
+            continue;
+        }
+
+        if (ps->o.benchmark) {
+            if (ps->o.benchmark_wid) {
+                win *w = find_win(ps, ps->o.benchmark_wid);
+                if (!w) {
+                    LOG_ERROR("Couldn't find specified benchmark window.");
+                    session_destroy(ps);
+                    exit(1);
+                }
+                add_damage_win(ps, w);
+            }
+            else {
+                force_repaint(ps);
+            }
+        }
+
+        // idling will be turned off during paint_preprocess() if needed
+        ps->idling = true;
+
+        t = paint_preprocess(ps, ps->list);
+        ps->tmout_unredir_hit = false;
+
+        // If the screen is unredirected, free all_damage to stop painting
+        if (!ps->redirected || ON == ps->o.stoppaint_force) {
+            free_region(ps, &ps->all_damage);
+        }
+
+        XserverRegion all_damage_orig = None;
+        if (ps->o.resize_damage > 0) {
+            all_damage_orig = copy_region(ps, ps->all_damage);
+        }
+        resize_region(ps, ps->all_damage, ps->o.resize_damage);
+        if (ps->all_damage && !is_region_empty(ps, ps->all_damage, NULL)) {
+            static int paint = 0;
+            paint_all(ps, ps->all_damage, all_damage_orig, t);
+            ps->reg_ignore_expire = false;
+            paint++;
+            if (ps->o.benchmark && paint >= ps->o.benchmark) {
+                exit(0);
+            }
+            XSync(ps->dpy, False);
+            ps->all_damage = None;
+        }
+        free_region(ps, &all_damage_orig);
+
+        if (ps->idling) {
+            ps->fade_time = 0L;
+        }
+    }
 }
 
 /**
@@ -7728,8 +7773,7 @@ static void session_run(session_t *ps)
  *
  * This will result in compton resetting itself after next paint.
  */
-static void
-reset_enable(int __attribute__((unused)) signum)
+static void reset_enable(int __attribute__((unused)) signum)
 {
   session_t * const ps = ps_g;
 

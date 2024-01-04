@@ -1,13 +1,13 @@
 /* See LICENSE file for copyright and license details. */
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <X11/Xlib.h>
 #include <X11/Xft/Xft.h>
 
-#include "patches.h"
 #include "drw.h"
+#include "log.h"
 #include "util.h"
+#include "patches.h"
 
 #if BIDI_PATCH
 #include <fribidi.h>
@@ -181,19 +181,12 @@ drw_clr_create(
         return;
 
     #if BAR_ALPHA_PATCH
-    if (!XftColorAllocName(drw->dpy, drw->visual, drw->cmap,
-                           clrname, dest))
-        #if DO_NOT_DIE_ON_COLOR_ALLOCATION_FAILURE_PATCH
-        fprintf(stderr, "warning, cannot allocate color '%s'", clrname);
-        #else
-        die("error, cannot allocate color '%s'", clrname);
-        #endif // DO_NOT_DIE_ON_COLOR_ALLOCATION_FAILURE_PATCH
+    if (!XftColorAllocName(drw->dpy, drw->visual, drw->cmap, clrname, dest))
+        LOG_WARNING("warning, cannot allocate color '%s'", clrname);
 
     dest->pixel = (dest->pixel & 0x00ffffffU) | (alpha << 24);
     #else
-    if (!XftColorAllocName(drw->dpy, DefaultVisual(drw->dpy, drw->screen),
-                           DefaultColormap(drw->dpy, drw->screen),
-                           clrname, dest))
+    if (!XftColorAllocName(drw->dpy, DefaultVisual(drw->dpy, drw->screen), DefaultColormap(drw->dpy, drw->screen), clrname, dest))
         #if DO_NOT_DIE_ON_COLOR_ALLOCATION_FAILURE_PATCH
         fprintf(stderr, "warning, cannot allocate color '%s'", clrname);
         #else

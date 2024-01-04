@@ -57,224 +57,204 @@ glx_debug_msg_callback(GLenum source, GLenum type,
 /**
  * Initialize OpenGL.
  */
-bool
-glx_init(session_t *ps, bool need_render) {
-  bool success = false;
-  XVisualInfo *pvis = NULL;
+bool glx_init(session_t *ps, bool need_render)
+{
+    bool success = false;
+    XVisualInfo *pvis = NULL;
 
-  // Check for GLX extension
-  if (!ps->glx_exists) {
-    if (glXQueryExtension(ps->dpy, &ps->glx_event, &ps->glx_error))
-      ps->glx_exists = true;
-    else {
-      printf_errf("(): No GLX extension.");
-      goto glx_init_end;
-    }
-  }
-
-  // Get XVisualInfo
-  pvis = get_visualinfo_from_visual(ps, ps->vis);
-  if (!pvis) {
-    printf_errf("(): Failed to acquire XVisualInfo for current visual.");
-    goto glx_init_end;
-  }
-
-  // Ensure the visual is double-buffered
-  if (need_render) {
-    int value = 0;
-    if (Success != glXGetConfig(ps->dpy, pvis, GLX_USE_GL, &value) || !value) {
-      printf_errf("(): Root visual is not a GL visual.");
-      goto glx_init_end;
+    // Check for GLX extension
+    if (!ps->glx_exists) {
+        if (glXQueryExtension(ps->dpy, &ps->glx_event, &ps->glx_error)) {
+            ps->glx_exists = true;
+        }
+        else {
+            LOG_ERROR("No GLX extension.");
+            goto glx_init_end;
+        }
     }
 
-    if (Success != glXGetConfig(ps->dpy, pvis, GLX_DOUBLEBUFFER, &value)
-        || !value) {
-      printf_errf("(): Root visual is not a double buffered GL visual.");
-      goto glx_init_end;
+    // Get XVisualInfo
+    pvis = get_visualinfo_from_visual(ps, ps->vis);
+    if (!pvis) {
+        LOG_ERROR("Failed to acquire XVisualInfo for current visual.");
+        goto glx_init_end;
     }
-  }
 
-  // Ensure GLX_EXT_texture_from_pixmap exists
-  if (need_render && !glx_hasglxext(ps, "GLX_EXT_texture_from_pixmap"))
-    goto glx_init_end;
+    // Ensure the visual is double-buffered
+    if (need_render) {
+        int value = 0;
+        if (Success != glXGetConfig(ps->dpy, pvis, GLX_USE_GL, &value) || !value) {
+            LOG_ERROR("Root visual is not a GL visual.");
+            goto glx_init_end;
+        }
 
-  // Initialize GLX data structure
-  if (!ps->psglx) {
-    static const glx_session_t CGLX_SESSION_DEF = CGLX_SESSION_INIT;
-    ps->psglx = cmalloc(1, glx_session_t);
-    memcpy(ps->psglx, &CGLX_SESSION_DEF, sizeof(glx_session_t));
+        if (Success != glXGetConfig(ps->dpy, pvis, GLX_DOUBLEBUFFER, &value) || !value) {
+            LOG_ERROR("Root visual is not a double buffered GL visual.");
+            goto glx_init_end;
+        }
+    }
+
+    // Ensure GLX_EXT_texture_from_pixmap exists
+    if (need_render && !glx_hasglxext(ps, "GLX_EXT_texture_from_pixmap")) {
+        goto glx_init_end;
+    }
+
+    // Initialize GLX data structure
+    if (!ps->psglx) {
+        static const glx_session_t CGLX_SESSION_DEF = CGLX_SESSION_INIT;
+        ps->psglx = cmalloc(1, glx_session_t);
+        memcpy(ps->psglx, &CGLX_SESSION_DEF, sizeof(glx_session_t));
 
 #ifdef CONFIG_VSYNC_OPENGL_GLSL
-    for (int i = 0; i < MAX_BLUR_PASS; ++i) {
-      glx_blur_pass_t *ppass = &ps->psglx->blur_passes[i];
-      ppass->unifm_factor_center = -1;
-      ppass->unifm_offset_x = -1;
-      ppass->unifm_offset_y = -1;
-    }
+        for (int i = 0; i < MAX_BLUR_PASS; ++i) {
+            glx_blur_pass_t *ppass = &ps->psglx->blur_passes[i];
+            ppass->unifm_factor_center = -1;
+            ppass->unifm_offset_x = -1;
+            ppass->unifm_offset_y = -1;
+        }
 #endif
-  }
-
-  glx_session_t *psglx = ps->psglx;
-
-  if (!psglx->context) {
-    // Get GLX context
-#ifndef DEBUG_GLX_DEBUG_CONTEXT
-    psglx->context = glXCreateContext(ps->dpy, pvis, None, GL_TRUE);
-#else
-    {
-      GLXFBConfig fbconfig = get_fbconfig_from_visualinfo(ps, pvis);
-      if (!fbconfig) {
-        printf_errf("(): Failed to get GLXFBConfig for root visual %#lx.",
-            pvis->visualid);
-        goto glx_init_end;
-      }
-
-      f_glXCreateContextAttribsARB p_glXCreateContextAttribsARB =
-        (f_glXCreateContextAttribsARB)
-        glXGetProcAddress((const GLubyte *) "glXCreateContextAttribsARB");
-      if (!p_glXCreateContextAttribsARB) {
-        printf_errf("(): Failed to get glXCreateContextAttribsARB().");
-        goto glx_init_end;
-      }
-
-      static const int attrib_list[] = {
-        GLX_CONTEXT_FLAGS_ARB, GLX_CONTEXT_DEBUG_BIT_ARB,
-        None
-      };
-      psglx->context = p_glXCreateContextAttribsARB(ps->dpy, fbconfig, NULL,
-          GL_TRUE, attrib_list);
     }
-#endif
+
+    glx_session_t *psglx = ps->psglx;
 
     if (!psglx->context) {
-      printf_errf("(): Failed to get GLX context.");
-      goto glx_init_end;
-    }
+        // Get GLX context
+#ifndef DEBUG_GLX_DEBUG_CONTEXT
+        psglx->context = glXCreateContext(ps->dpy, pvis, None, GL_TRUE);
+#else
+        {
+            GLXFBConfig fbconfig = get_fbconfig_from_visualinfo(ps, pvis);
+            if (!fbconfig) {
+                LOG_ERROR("Failed to get GLXFBConfig for root visual %#lx.", pvis->visualid);
+                goto glx_init_end;
+            }
 
-    // Attach GLX context
-    if (!glXMakeCurrent(ps->dpy, get_tgt_window(ps), psglx->context)) {
-      printf_errf("(): Failed to attach GLX context.");
-      goto glx_init_end;
-    }
+            f_glXCreateContextAttribsARB p_glXCreateContextAttribsARB = (f_glXCreateContextAttribsARB) glXGetProcAddress((const GLubyte *) "glXCreateContextAttribsARB");
+            if (!p_glXCreateContextAttribsARB) {
+                LOG_ERROR("Failed to get glXCreateContextAttribsARB().");
+                goto glx_init_end;
+            }
+
+            static const int attrib_list[] = {
+                GLX_CONTEXT_FLAGS_ARB, GLX_CONTEXT_DEBUG_BIT_ARB,
+                None
+            };
+            psglx->context = p_glXCreateContextAttribsARB(ps->dpy, fbconfig, NULL, GL_TRUE, attrib_list);
+        }
+#endif
+        if (!psglx->context) {
+            LOG_ERROR("Failed to get GLX context.");
+            goto glx_init_end;
+        }
+
+        // Attach GLX context
+        if (!glXMakeCurrent(ps->dpy, get_tgt_window(ps), psglx->context)) {
+            LOG_ERROR("Failed to attach GLX context.");
+            goto glx_init_end;
+        }
 
 #ifdef DEBUG_GLX_DEBUG_CONTEXT
-    {
-      f_DebugMessageCallback p_DebugMessageCallback =
-        (f_DebugMessageCallback)
-        glXGetProcAddress((const GLubyte *) "glDebugMessageCallback");
-      if (!p_DebugMessageCallback) {
-        printf_errf("(): Failed to get glDebugMessageCallback(0.");
-        goto glx_init_end;
-      }
-      p_DebugMessageCallback(glx_debug_msg_callback, ps);
-    }
+        {
+            f_DebugMessageCallback p_DebugMessageCallback = (f_DebugMessageCallback) glXGetProcAddress((const GLubyte *) "glDebugMessageCallback");
+            if (!p_DebugMessageCallback) {
+                LOG_ERROR("Failed to get glDebugMessageCallback(0.");
+                goto glx_init_end;
+            }
+            p_DebugMessageCallback(glx_debug_msg_callback, ps);
+        }
 #endif
-
-  }
-
-  // Ensure we have a stencil buffer. X Fixes does not guarantee rectangles
-  // in regions don't overlap, so we must use stencil buffer to make sure
-  // we don't paint a region for more than one time, I think?
-  if (need_render && !ps->o.glx_no_stencil) {
-    GLint val = 0;
-    glGetIntegerv(GL_STENCIL_BITS, &val);
-    if (!val) {
-      printf_errf("(): Target window doesn't have stencil buffer.");
-      goto glx_init_end;
     }
-  }
 
-  // Check GL_ARB_texture_non_power_of_two, requires a GLX context and
-  // must precede FBConfig fetching
-  if (need_render)
-    psglx->has_texture_non_power_of_two = glx_hasglext(ps,
-        "GL_ARB_texture_non_power_of_two");
+    // Ensure we have a stencil buffer. X Fixes does not guarantee rectangles
+    // in regions don't overlap, so we must use stencil buffer to make sure
+    // we don't paint a region for more than one time, I think?
+    if (need_render && !ps->o.glx_no_stencil) {
+        GLint val = 0;
+        glGetIntegerv(GL_STENCIL_BITS, &val);
+        if (!val) {
+            LOG_ERROR("Target window doesn't have stencil buffer.");
+            goto glx_init_end;
+        }
+    }
 
-  // Acquire function addresses
-  if (need_render) {
+    // Check GL_ARB_texture_non_power_of_two, requires a GLX context and
+    // must precede FBConfig fetching
+    if (need_render) {
+        psglx->has_texture_non_power_of_two = glx_hasglext(ps, "GL_ARB_texture_non_power_of_two");
+    }
+
+    // Acquire function addresses
+    if (need_render) {
 #ifdef DEBUG_GLX_MARK
-    psglx->glStringMarkerGREMEDY = (f_StringMarkerGREMEDY)
-      glXGetProcAddress((const GLubyte *) "glStringMarkerGREMEDY");
-    psglx->glFrameTerminatorGREMEDY = (f_FrameTerminatorGREMEDY)
-      glXGetProcAddress((const GLubyte *) "glFrameTerminatorGREMEDY");
+        psglx->glStringMarkerGREMEDY = (f_StringMarkerGREMEDY) glXGetProcAddress((const GLubyte *) "glStringMarkerGREMEDY");
+        psglx->glFrameTerminatorGREMEDY = (f_FrameTerminatorGREMEDY) glXGetProcAddress((const GLubyte *) "glFrameTerminatorGREMEDY");
 #endif
+        psglx->glXBindTexImageProc = (f_BindTexImageEXT) glXGetProcAddress((const GLubyte *) "glXBindTexImageEXT");
+        psglx->glXReleaseTexImageProc = (f_ReleaseTexImageEXT) glXGetProcAddress((const GLubyte *) "glXReleaseTexImageEXT");
+        if (!psglx->glXBindTexImageProc || !psglx->glXReleaseTexImageProc) {
+            LOG_ERROR("Failed to acquire glXBindTexImageEXT() / glXReleaseTexImageEXT().");
+            goto glx_init_end;
+        }
 
-    psglx->glXBindTexImageProc = (f_BindTexImageEXT)
-      glXGetProcAddress((const GLubyte *) "glXBindTexImageEXT");
-    psglx->glXReleaseTexImageProc = (f_ReleaseTexImageEXT)
-      glXGetProcAddress((const GLubyte *) "glXReleaseTexImageEXT");
-    if (!psglx->glXBindTexImageProc || !psglx->glXReleaseTexImageProc) {
-      printf_errf("(): Failed to acquire glXBindTexImageEXT() / glXReleaseTexImageEXT().");
-      goto glx_init_end;
-    }
-
-    if (ps->o.glx_use_copysubbuffermesa) {
-      psglx->glXCopySubBufferProc = (f_CopySubBuffer)
-        glXGetProcAddress((const GLubyte *) "glXCopySubBufferMESA");
-      if (!psglx->glXCopySubBufferProc) {
-        printf_errf("(): Failed to acquire glXCopySubBufferMESA().");
-        goto glx_init_end;
-      }
-    }
+        if (ps->o.glx_use_copysubbuffermesa) {
+            psglx->glXCopySubBufferProc = (f_CopySubBuffer) glXGetProcAddress((const GLubyte *) "glXCopySubBufferMESA");
+            if (!psglx->glXCopySubBufferProc) {
+                LOG_ERROR("Failed to acquire glXCopySubBufferMESA().");
+                goto glx_init_end;
+            }
+        }
 
 #ifdef CONFIG_GLX_SYNC
-    psglx->glFenceSyncProc = (f_FenceSync)
-      glXGetProcAddress((const GLubyte *) "glFenceSync");
-    psglx->glIsSyncProc = (f_IsSync)
-      glXGetProcAddress((const GLubyte *) "glIsSync");
-    psglx->glDeleteSyncProc = (f_DeleteSync)
-      glXGetProcAddress((const GLubyte *) "glDeleteSync");
-    psglx->glClientWaitSyncProc = (f_ClientWaitSync)
-      glXGetProcAddress((const GLubyte *) "glClientWaitSync");
-    psglx->glWaitSyncProc = (f_WaitSync)
-      glXGetProcAddress((const GLubyte *) "glWaitSync");
-    psglx->glImportSyncEXT = (f_ImportSyncEXT)
-      glXGetProcAddress((const GLubyte *) "glImportSyncEXT");
-    if (!psglx->glFenceSyncProc || !psglx->glIsSyncProc || !psglx->glDeleteSyncProc
-        || !psglx->glClientWaitSyncProc || !psglx->glWaitSyncProc
-        || !psglx->glImportSyncEXT) {
-      printf_errf("(): Failed to acquire GLX sync functions.");
-      goto glx_init_end;
-    }
+        psglx->glFenceSyncProc = (f_FenceSync) glXGetProcAddress((const GLubyte *) "glFenceSync");
+        psglx->glIsSyncProc = (f_IsSync) glXGetProcAddress((const GLubyte *) "glIsSync");
+        psglx->glDeleteSyncProc = (f_DeleteSync) glXGetProcAddress((const GLubyte *) "glDeleteSync");
+        psglx->glClientWaitSyncProc = (f_ClientWaitSync) glXGetProcAddress((const GLubyte *) "glClientWaitSync");
+        psglx->glWaitSyncProc = (f_WaitSync) glXGetProcAddress((const GLubyte *) "glWaitSync");
+        psglx->glImportSyncEXT = (f_ImportSyncEXT) glXGetProcAddress((const GLubyte *) "glImportSyncEXT");
+        if (!psglx->glFenceSyncProc || !psglx->glIsSyncProc || !psglx->glDeleteSyncProc || !psglx->glClientWaitSyncProc || !psglx->glWaitSyncProc || !psglx->glImportSyncEXT) {
+            LOG_ERROR("Failed to acquire GLX sync functions.");
+            goto glx_init_end;
+        }
 #endif
-  }
-
-  // Acquire FBConfigs
-  if (need_render && !glx_update_fbconfig(ps))
-    goto glx_init_end;
-
-  // Render preparations
-  if (need_render) {
-    glx_on_root_change(ps);
-
-    glDisable(GL_DEPTH_TEST);
-    glDepthMask(GL_FALSE);
-    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
-    glDisable(GL_BLEND);
-
-    if (!ps->o.glx_no_stencil) {
-      // Initialize stencil buffer
-      glClear(GL_STENCIL_BUFFER_BIT);
-      glDisable(GL_STENCIL_TEST);
-      glStencilMask(0x1);
-      glStencilFunc(GL_EQUAL, 0x1, 0x1);
     }
 
-    // Clear screen
-    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-    // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    // glXSwapBuffers(ps->dpy, get_tgt_window(ps));
-  }
+    // Acquire FBConfigs
+    if (need_render && !glx_update_fbconfig(ps)) {
+        goto glx_init_end;
+    }
 
-  success = true;
+    // Render preparations
+    if (need_render) {
+        glx_on_root_change(ps);
+
+        glDisable(GL_DEPTH_TEST);
+        glDepthMask(GL_FALSE);
+        glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+        glDisable(GL_BLEND);
+
+        if (!ps->o.glx_no_stencil) {
+            // Initialize stencil buffer
+            glClear(GL_STENCIL_BUFFER_BIT);
+            glDisable(GL_STENCIL_TEST);
+            glStencilMask(0x1);
+            glStencilFunc(GL_EQUAL, 0x1, 0x1);
+        }
+
+        // Clear screen
+        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+        // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        // glXSwapBuffers(ps->dpy, get_tgt_window(ps));
+    }
+
+    success = true;
 
 glx_init_end:
-  cxfree(pvis);
+    cxfree(pvis);
+    if (!success) {
+        glx_destroy(ps);
+    }
 
-  if (!success)
-    glx_destroy(ps);
-
-  return success;
+    return success;
 }
 
 #ifdef CONFIG_VSYNC_OPENGL_GLSL
@@ -592,97 +572,95 @@ glx_update_fbconfig_bydepth(session_t *ps, int depth, glx_fbconfig_t *pfbcfg) {
 /**
  * Get GLX FBConfigs for all depths.
  */
-static bool
-glx_update_fbconfig(session_t *ps) {
-  // Acquire all FBConfigs and loop through them
-  int nele = 0;
-  GLXFBConfig* pfbcfgs = glXGetFBConfigs(ps->dpy, ps->scr, &nele);
+static bool glx_update_fbconfig(session_t *ps)
+{
+    // Acquire all FBConfigs and loop through them
+    int nele = 0;
+    GLXFBConfig* pfbcfgs = glXGetFBConfigs(ps->dpy, ps->scr, &nele);
 
-  for (GLXFBConfig *pcur = pfbcfgs; pcur < pfbcfgs + nele; pcur++) {
-    glx_fbconfig_t fbinfo = {
-      .cfg = *pcur,
-      .texture_fmt = 0,
-      .texture_tgts = 0,
-      .y_inverted = false,
-    };
-    int id = (int) (pcur - pfbcfgs);
-    int depth = 0, depth_alpha = 0, val = 0;
+    for (GLXFBConfig *pcur = pfbcfgs; pcur < pfbcfgs + nele; pcur++) {
+        glx_fbconfig_t fbinfo = {
+            .cfg = *pcur,
+            .texture_fmt = 0,
+            .texture_tgts = 0,
+            .y_inverted = false,
+        };
+        int id = (int) (pcur - pfbcfgs);
+        int depth = 0, depth_alpha = 0, val = 0;
 
-    // Skip over multi-sampled visuals
-    // http://people.freedesktop.org/~glisse/0001-glx-do-not-use-multisample-visual-config-for-front-o.patch
+        // Skip over multi-sampled visuals
+        // http://people.freedesktop.org/~glisse/0001-glx-do-not-use-multisample-visual-config-for-front-o.patch
 #ifdef GLX_SAMPLES
-    if (Success == glXGetFBConfigAttrib(ps->dpy, *pcur, GLX_SAMPLES, &val)
-        && val > 1)
-      continue;
+        if (Success == glXGetFBConfigAttrib(ps->dpy, *pcur, GLX_SAMPLES, &val) && val > 1) {
+            continue;
+        }
 #endif
 
-    if (Success != glXGetFBConfigAttrib(ps->dpy, *pcur, GLX_BUFFER_SIZE, &depth)
-        || Success != glXGetFBConfigAttrib(ps->dpy, *pcur, GLX_ALPHA_SIZE, &depth_alpha)) {
-      printf_errf("(): Failed to retrieve buffer size and alpha size of FBConfig %d.", id);
-      continue;
+        if (Success != glXGetFBConfigAttrib(ps->dpy, *pcur, GLX_BUFFER_SIZE, &depth) || Success != glXGetFBConfigAttrib(ps->dpy, *pcur, GLX_ALPHA_SIZE, &depth_alpha)) {
+            LOG_ERROR("Failed to retrieve buffer size and alpha size of FBConfig %d.", id);
+            continue;
+        }
+        if (Success != glXGetFBConfigAttrib(ps->dpy, *pcur, GLX_BIND_TO_TEXTURE_TARGETS_EXT, &fbinfo.texture_tgts)) {
+            LOG_ERROR("Failed to retrieve BIND_TO_TEXTURE_TARGETS_EXT of FBConfig %d.", id);
+            continue;
+        }
+
+        int visualdepth = 0;
+        {
+            XVisualInfo *pvi = glXGetVisualFromFBConfig(ps->dpy, *pcur);
+            if (!pvi) {
+                // On nvidia-drivers-325.08 this happens slightly too often...
+                // printf_errf("(): Failed to retrieve X Visual of FBConfig %d.", id);
+                continue;
+            }
+            visualdepth = pvi->depth;
+            cxfree(pvi);
+        }
+
+        bool rgb = false;
+        bool rgba = false;
+
+        if (depth >= 32 && depth_alpha && Success == glXGetFBConfigAttrib(ps->dpy, *pcur, GLX_BIND_TO_TEXTURE_RGBA_EXT, &val) && val) {
+            rgba = true;
+        }
+
+        if (Success == glXGetFBConfigAttrib(ps->dpy, *pcur, GLX_BIND_TO_TEXTURE_RGB_EXT, &val) && val) {
+            rgb = true;
+        }
+
+        if (Success == glXGetFBConfigAttrib(ps->dpy, *pcur, GLX_Y_INVERTED_EXT, &val)) {
+            fbinfo.y_inverted = val;
+        }
+
+        {
+            int tgtdpt = depth - depth_alpha;
+            if (tgtdpt == visualdepth && tgtdpt < 32 && rgb) {
+                fbinfo.texture_fmt = GLX_TEXTURE_FORMAT_RGB_EXT;
+                glx_update_fbconfig_bydepth(ps, tgtdpt, &fbinfo);
+            }
+        }
+
+        if (depth == visualdepth && rgba) {
+            fbinfo.texture_fmt = GLX_TEXTURE_FORMAT_RGBA_EXT;
+            glx_update_fbconfig_bydepth(ps, depth, &fbinfo);
+        }
     }
-    if (Success != glXGetFBConfigAttrib(ps->dpy, *pcur, GLX_BIND_TO_TEXTURE_TARGETS_EXT, &fbinfo.texture_tgts)) {
-      printf_errf("(): Failed to retrieve BIND_TO_TEXTURE_TARGETS_EXT of FBConfig %d.", id);
-      continue;
+
+    cxfree(pfbcfgs);
+
+    // Sanity checks
+    if (!ps->psglx->fbconfigs[ps->depth]) {
+        LOG_ERROR("No FBConfig found for default depth %d.", ps->depth);
+        return false;
     }
 
-    int visualdepth = 0;
-    {
-      XVisualInfo *pvi = glXGetVisualFromFBConfig(ps->dpy, *pcur);
-      if (!pvi) {
-        // On nvidia-drivers-325.08 this happens slightly too often...
-        // printf_errf("(): Failed to retrieve X Visual of FBConfig %d.", id);
-        continue;
-      }
-      visualdepth = pvi->depth;
-      cxfree(pvi);
+    if (!ps->psglx->fbconfigs[32]) {
+        LOG_ERROR("No FBConfig found for depth 32. Expect crazy things.");
     }
 
-    bool rgb = false;
-    bool rgba = false;
+    LOG_DEBUG("%d-bit: %#3x, 32-bit: %#3x", ps->depth, (int) ps->psglx->fbconfigs[ps->depth]->cfg, (int) ps->psglx->fbconfigs[32]->cfg);
 
-    if (depth >= 32 && depth_alpha && Success == glXGetFBConfigAttrib(ps->dpy, *pcur, GLX_BIND_TO_TEXTURE_RGBA_EXT, &val) && val)
-      rgba = true;
-
-    if (Success == glXGetFBConfigAttrib(ps->dpy, *pcur, GLX_BIND_TO_TEXTURE_RGB_EXT, &val) && val)
-      rgb = true;
-
-    if (Success == glXGetFBConfigAttrib(ps->dpy, *pcur, GLX_Y_INVERTED_EXT, &val))
-      fbinfo.y_inverted = val;
-
-    {
-      int tgtdpt = depth - depth_alpha;
-      if (tgtdpt == visualdepth && tgtdpt < 32 && rgb) {
-        fbinfo.texture_fmt = GLX_TEXTURE_FORMAT_RGB_EXT;
-        glx_update_fbconfig_bydepth(ps, tgtdpt, &fbinfo);
-      }
-    }
-
-    if (depth == visualdepth && rgba) {
-      fbinfo.texture_fmt = GLX_TEXTURE_FORMAT_RGBA_EXT;
-      glx_update_fbconfig_bydepth(ps, depth, &fbinfo);
-    }
-  }
-
-  cxfree(pfbcfgs);
-
-  // Sanity checks
-  if (!ps->psglx->fbconfigs[ps->depth]) {
-    printf_errf("(): No FBConfig found for default depth %d.", ps->depth);
-    return false;
-  }
-
-  if (!ps->psglx->fbconfigs[32]) {
-    printf_errf("(): No FBConfig found for depth 32. Expect crazy things.");
-  }
-
-#ifdef DEBUG_GLX
-  printf_dbgf("(): %d-bit: %#3x, 32-bit: %#3x\n",
-      ps->depth, (int) ps->psglx->fbconfigs[ps->depth]->cfg,
-      (int) ps->psglx->fbconfigs[32]->cfg);
-#endif
-
-  return true;
+    return true;
 }
 
 static inline int

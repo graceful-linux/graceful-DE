@@ -101,9 +101,7 @@
 #if COOL_AUTOSTART_PATCH
 #include "cool_autostart.h"
 #endif
-#if CYCLELAYOUTS_PATCH
 #include "cyclelayouts.h"
-#endif
 #if DECORATION_HINTS_PATCH
 #include "decorationhints.h"
 #endif
@@ -113,17 +111,13 @@
 #if DRAGCFACT_PATCH && CFACTS_PATCH
 #include "dragcfact.h"
 #endif
-#if DRAGMFACT_PATCH
 #include "dragmfact.h"
-#endif
 #if DWMC_PATCH
 #include "dwmc.h"
 #elif FSIGNAL_PATCH
 #include "fsignal.h"
 #endif
-#if EXRESIZE_PATCH
 #include "exresize.h"
-#endif
 #if !FAKEFULLSCREEN_PATCH && FAKEFULLSCREEN_CLIENT_PATCH
 #include "fakefullscreenclient.h"
 #endif
@@ -136,9 +130,7 @@
 #if FOCUSADJACENTTAG_PATCH
 #include "focusadjacenttag.h"
 #endif
-#if FOCUSFOLLOWMOUSE_PATCH
 #include "focusfollowmouse.h"
-#endif
 #if FOCUSMASTER_PATCH || FOCUSMASTER_RETURN_PATCH
 #include "focusmaster.h"
 #endif

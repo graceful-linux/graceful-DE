@@ -72,13 +72,13 @@ sub_unslong(unsigned long a, unsigned long b) {
 /**
  * Set a <code>bool</code> array of all wintypes to true.
  */
-static inline void
-wintype_arr_enable(bool arr[]) {
-  wintype_t i;
+static inline void wintype_arr_enable(bool arr[])
+{
+    wintype_t i;
 
-  for (i = 0; i < NUM_WINTYPES; ++i) {
-    arr[i] = true;
-  }
+    for (i = 0; i < NUM_WINTYPES; ++i) {
+        arr[i] = true;
+    }
 }
 
 /**

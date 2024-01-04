@@ -129,10 +129,8 @@ enum {
     CurResizeTR,
     CurResizeTL,
     #endif // RESIZEPOINT_PATCH | RESIZECORNERS_PATCH
-    #if DRAGMFACT_PATCH
     CurResizeHorzArrow,
     CurResizeVertArrow,
-    #endif // DRAGMFACT_PATCH
     #if DRAGCFACT_PATCH
     CurIronCross,
     #endif // DRAGCFACT_PATCH
@@ -201,9 +199,7 @@ enum {
     NetSystemTrayVisual, NetWMWindowTypeDock, NetSystemTrayOrientationHorz,
     NetDesktopNames, NetDesktopViewport, NetNumberOfDesktops, NetCurrentDesktop,
     NetClientList,
-    #if NET_CLIENT_LIST_STACKING_PATCH
-    NetClientListStacking,
-    #endif // NET_CLIENT_LIST_STACKING_PATCH
+    NetClientListStacking,      /* 支持视屏会议选中单个窗口 */
     NetLast
 }; /* EWMH atoms */
 
@@ -344,9 +340,7 @@ struct Client {
     float cfact;
     #endif // CFACTS_PATCH
     int x, y, w, h;
-    #if SAVEFLOATS_PATCH || EXRESIZE_PATCH
     int sfx, sfy, sfw, sfh; /* stored float geometry, used on mode revert */
-    #endif // SAVEFLOATS_PATCH / EXRESIZE_PATCH
     #if SEAMLESS_RESTART_PATCH
     unsigned int idx;
     #endif // SEAMLESS_RESTART_PATCH
@@ -361,13 +355,11 @@ struct Client {
     #if !FAKEFULLSCREEN_PATCH && FAKEFULLSCREEN_CLIENT_PATCH
     int fakefullscreen;
     #endif // FAKEFULLSCREEN_CLIENT_PATCH
-    #if EXRESIZE_PATCH
     unsigned char expandmask;
     int expandx1, expandy1, expandx2, expandy2;
     #if !MAXIMIZE_PATCH
     int wasfloating;
     #endif // MAXIMIZE_PATCH
-    #endif // EXRESIZE_PATCH
     #if MAXIMIZE_PATCH
     int ismax, wasfloating;
     #endif // MAXIMIZE_PATCH
@@ -2081,10 +2073,8 @@ void expose(XEvent *e)
 void
 focus(Client *c)
 {
-    #if FOCUSFOLLOWMOUSE_PATCH
     if (!c || !ISVISIBLE(c))
         c = getpointerclient();
-    #endif // FOCUSFOLLOWMOUSE_PATCH
     #if STICKY_PATCH
     if (!c || !ISVISIBLE(c))
         for (c = selmon->stack; c && (!ISVISIBLE(c) || c->issticky); c = c->snext);
@@ -2474,9 +2464,7 @@ void manage(Window w, XWindowAttributes *wa)
     c->pid = winpid(w);
     #endif // SWALLOW_PATCH
     /* geometry */
-    #if SAVEFLOATS_PATCH || EXRESIZE_PATCH
     c->sfx = c->sfy = c->sfw = c->sfh = -9999;
-    #endif // SAVEFLOATS_PATCH | EXRESIZE_PATCH
     c->x = c->oldx = wa->x;
     c->y = c->oldy = wa->y;
     c->w = c->oldw = wa->width;
@@ -2594,7 +2582,7 @@ void manage(Window w, XWindowAttributes *wa)
     updatemotifhints(c);
     #endif // DECORATION_HINTS_PATCH
 
-    #if CENTER_PATCH && SAVEFLOATS_PATCH || CENTER_PATCH && EXRESIZE_PATCH
+    #if CENTER_PATCH && SAVEFLOATS_PATCH || CENTER_PATCH && 1
     if (c->iscentered) {
         c->sfx = c->x = c->mon->wx + (c->mon->ww - WIDTH(c)) / 2;
         c->sfy = c->y = c->mon->wy + (c->mon->wh - HEIGHT(c)) / 2;
@@ -2604,14 +2592,14 @@ void manage(Window w, XWindowAttributes *wa)
         c->x = c->mon->wx + (c->mon->ww - WIDTH(c)) / 2;
         c->y = c->mon->wy + (c->mon->wh - HEIGHT(c)) / 2;
     }
-    #elif ALWAYSCENTER_PATCH && SAVEFLOATS_PATCH || ALWAYSCENTER_PATCH && EXRESIZE_PATCH
+    #elif ALWAYSCENTER_PATCH && SAVEFLOATS_PATCH || ALWAYSCENTER_PATCH && 1
     c->sfx = c->x = c->mon->wx + (c->mon->ww - WIDTH(c)) / 2;
     c->sfy = c->y = c->mon->wy + (c->mon->wh - HEIGHT(c)) / 2;
     #elif ALWAYSCENTER_PATCH
     c->x = c->mon->wx + (c->mon->ww - WIDTH(c)) / 2;
     c->y = c->mon->wy + (c->mon->wh - HEIGHT(c)) / 2;
     #endif // CENTER_PATCH / ALWAYSCENTER_PATCH / SAVEFLOATS_PATCH
-    #if SAVEFLOATS_PATCH || EXRESIZE_PATCH
+    #if SAVEFLOATS_PATCH || 1
     if (c->sfw == -9999) {
         c->sfw = c->w;
         c->sfh = c->h;
@@ -2626,7 +2614,7 @@ void manage(Window w, XWindowAttributes *wa)
     #if MAXIMIZE_PATCH
     c->wasfloating = 0;
     c->ismax = 0;
-    #elif EXRESIZE_PATCH
+    #elif 1
     c->wasfloating = 0;
     #endif // MAXIMIZE_PATCH / EXRESIZE_PATCH
 
@@ -2644,10 +2632,7 @@ void manage(Window w, XWindowAttributes *wa)
     attachstack(c);
     XChangeProperty(dpy, root, netatom[NetClientList], XA_WINDOW, 32, PropModeAppend,
         (unsigned char *) &(c->win), 1);
-    #if NET_CLIENT_LIST_STACKING_PATCH
-    XChangeProperty(dpy, root, netatom[NetClientListStacking], XA_WINDOW, 32, PropModePrepend,
-        (unsigned char *) &(c->win), 1);
-    #endif // NET_CLIENT_LIST_STACKING_PATCH
+    XChangeProperty(dpy, root, netatom[NetClientListStacking], XA_WINDOW, 32, PropModePrepend, (unsigned char *) &(c->win), 1);
     XMoveResizeWindow(dpy, c->win, c->x + 2 * sw, c->y, c->w, c->h); /* some windows require this */
 
     #if BAR_WINTITLEACTIONS_PATCH
@@ -2829,7 +2814,7 @@ movemouse(const Arg *arg)
                 ny = selmon->wy + selmon->wh - HEIGHT(c);
             if (!c->isfloating && selmon->lt[selmon->sellt]->arrange
             && (abs(nx - c->x) > snap || abs(ny - c->y) > snap)) {
-                #if SAVEFLOATS_PATCH || EXRESIZE_PATCH
+                #if SAVEFLOATS_PATCH || 1
                 c->sfx = -9999; // disable savefloats when using movemouse
                 #endif // SAVEFLOATS_PATCH | EXRESIZE_PATCH
                 togglefloating(NULL);
@@ -2853,13 +2838,11 @@ movemouse(const Arg *arg)
         selmon = m;
         focus(NULL);
     }
-    #if SAVEFLOATS_PATCH || EXRESIZE_PATCH
     /* save last known float coordinates */
     if (!selmon->lt[selmon->sellt]->arrange || c->isfloating) {
         c->sfx = nx;
         c->sfy = ny;
     }
-    #endif // SAVEFLOATS_PATCH / EXRESIZE_PATCH
     ignoreconfigurerequests = 0;
 }
 
@@ -3017,9 +3000,7 @@ resizeclient(Client *c, int x, int y, int w, int h)
     c->oldy = c->y; c->y = wc.y = y;
     c->oldw = c->w; c->w = wc.width = w;
     c->oldh = c->h; c->h = wc.height = h;
-    #if EXRESIZE_PATCH
     c->expandmask = 0;
-    #endif // EXRESIZE_PATCH
     wc.border_width = c->bw;
     #if ROUNDED_CORNERS_PATCH
     drawroundedcorners(c);
@@ -3146,9 +3127,7 @@ resizemouse(const Arg *arg)
             {
                 if (!c->isfloating && selmon->lt[selmon->sellt]->arrange
                 && (abs(nw - c->w) > snap || abs(nh - c->h) > snap)) {
-                    #if SAVEFLOATS_PATCH || EXRESIZE_PATCH
                     c->sfx = -9999; // disable savefloats when using resizemouse
-                    #endif // SAVEFLOATS_PATCH | EXRESIZE_PATCH
                     togglefloating(NULL);
                 }
             }
@@ -3181,7 +3160,6 @@ resizemouse(const Arg *arg)
         selmon = m;
         focus(NULL);
     }
-    #if SAVEFLOATS_PATCH || EXRESIZE_PATCH
     /* save last known float dimensions */
     if (!selmon->lt[selmon->sellt]->arrange || c->isfloating) {
         c->sfx = nx;
@@ -3189,7 +3167,6 @@ resizemouse(const Arg *arg)
         c->sfw = nw;
         c->sfh = nh;
     }
-    #endif // SAVEFLOATS_PATCH | EXRESIZE_PATCH
     ignoreconfigurerequests = 0;
 }
 
@@ -3379,18 +3356,16 @@ scan(void)
 void
 sendmon(Client *c, Monitor *m)
 {
-    #if EXRESIZE_PATCH
     Monitor *oldm = selmon;
-    #endif // EXRESIZE_PATCH
     if (c->mon == m)
         return;
-    #if SENDMON_KEEPFOCUS_PATCH && !EXRESIZE_PATCH
+    #if SENDMON_KEEPFOCUS_PATCH && !1
     int hadfocus = (c == selmon->sel);
     #endif // SENDMON_KEEPFOCUS_PATCH
     unfocus(c, 1, NULL);
     detach(c);
     detachstack(c);
-    #if SENDMON_KEEPFOCUS_PATCH && !EXRESIZE_PATCH
+    #if SENDMON_KEEPFOCUS_PATCH && !1
     arrange(c->mon);
     #endif // SENDMON_KEEPFOCUS_PATCH
     c->mon = m;
@@ -3416,7 +3391,7 @@ sendmon(Client *c, Monitor *m)
     attach(c);
     #endif
     attachstack(c);
-    #if EXRESIZE_PATCH
+    #if 1
     if (oldm != m)
         arrange(oldm);
     arrange(m);
@@ -3619,7 +3594,6 @@ setlayout(const Arg *arg)
         #else
         selmon->sellt ^= 1;
         #endif // PERTAG_PATCH
-        #if EXRESIZE_PATCH
         if (!selmon->lt[selmon->sellt]->arrange) {
             for (Client *c = selmon->clients ; c ; c = c->next) {
                 if (!c->isfloating) {
@@ -3629,7 +3603,6 @@ setlayout(const Arg *arg)
                 }
             }
         }
-        #endif // EXRESIZE_PATCH
     #if !TOGGLELAYOUT_PATCH
     }
     #endif // TOGGLELAYOUT_PATCH
@@ -3811,9 +3784,7 @@ void setup(void)
     netatom[NetWMFullscreen] = XInternAtom(dpy, "_NET_WM_STATE_FULLSCREEN", False);
     netatom[NetWMWindowType] = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE", False);
     netatom[NetClientList] = XInternAtom(dpy, "_NET_CLIENT_LIST", False);
-    #if NET_CLIENT_LIST_STACKING_PATCH
     netatom[NetClientListStacking] = XInternAtom(dpy, "_NET_CLIENT_LIST_STACKING", False);
-    #endif // NET_CLIENT_LIST_STACKING_PATCH
     #if DECORATION_HINTS_PATCH
     motifatom = XInternAtom(dpy, "_MOTIF_WM_HINTS", False);
     #endif // DECORATION_HINTS_PATCH
@@ -3826,10 +3797,8 @@ void setup(void)
     cursor[CurResizeTR] = drw_cur_create(drw, XC_top_right_corner);
     cursor[CurResizeTL] = drw_cur_create(drw, XC_top_left_corner);
     #endif // RESIZEPOINT_PATCH | RESIZECORNERS_PATCH
-    #if DRAGMFACT_PATCH
     cursor[CurResizeHorzArrow] = drw_cur_create(drw, XC_sb_h_double_arrow);
     cursor[CurResizeVertArrow] = drw_cur_create(drw, XC_sb_v_double_arrow);
-    #endif // DRAGMFACT_PATCH
     #if DRAGCFACT_PATCH
     cursor[CurIronCross] = drw_cur_create(drw, XC_iron_cross);
     #endif // DRAGCFACT_PATCH
@@ -3893,9 +3862,7 @@ void setup(void)
     setdesktopnames();
     setviewport();
     XDeleteProperty(dpy, root, netatom[NetClientList]);
-    #if NET_CLIENT_LIST_STACKING_PATCH
     XDeleteProperty(dpy, root, netatom[NetClientListStacking]);
-    #endif // NET_CLIENT_LIST_STACKING_PATCH
     /* select events */
     wa.cursor = cursor[CurNormal]->cursor;
     wa.event_mask = SubstructureRedirectMask|SubstructureNotifyMask
@@ -3968,14 +3935,12 @@ showhide(Client *c)
         #endif // SCRATCHPADS_KEEP_POSITION_AND_SIZE_PATCH | SCRATCHPADS_PATCH
         #endif // RENAMED_SCRATCHPADS_PATCH
         /* show clients top down */
-        #if SAVEFLOATS_PATCH || EXRESIZE_PATCH
         if (!c->mon->lt[c->mon->sellt]->arrange && c->sfx != -9999 && !c->isfullscreen) {
             XMoveResizeWindow(dpy, c->win, c->sfx, c->sfy, c->sfw, c->sfh);
             resize(c, c->sfx, c->sfy, c->sfw, c->sfh, 0);
             showhide(c->snext);
             return;
         }
-        #endif // SAVEFLOATS_PATCH / EXRESIZE_PATCH
         #if AUTORESIZE_PATCH
         if (c->needresize) {
             c->needresize = 0;
@@ -4236,21 +4201,20 @@ togglefloating(const Arg *arg)
         XSetWindowBorder(dpy, c->win, scheme[SchemeSel][ColBorder].pixel);
     #endif // BAR_FLEXWINTITLE_PATCH
     if (c->isfloating) {
-        #if SAVEFLOATS_PATCH || EXRESIZE_PATCH
         if (c->sfx != -9999) {
             /* restore last known float dimensions */
             resize(c, c->sfx, c->sfy, c->sfw, c->sfh, 0);
-        } else
-        #endif // SAVEFLOATS_PATCH // EXRESIZE_PATCH
-        resize(c, c->x, c->y, c->w, c->h, 0);
-    #if SAVEFLOATS_PATCH || EXRESIZE_PATCH
-    } else {
+        }
+        else {
+            resize(c, c->x, c->y, c->w, c->h, 0);
+        }
+    }
+    else {
         /* save last known float dimensions */
         c->sfx = c->x;
         c->sfy = c->y;
         c->sfw = c->w;
         c->sfh = c->h;
-    #endif // SAVEFLOATS_PATCH / EXRESIZE_PATCH
     }
     arrange(c->mon);
     setfloatinghint(c);
@@ -4699,8 +4663,7 @@ void update_bar_pos(Monitor *m)
     }
 }
 
-void
-updateclientlist()
+void updateclientlist()
 {
     Client *c;
     Monitor *m;
@@ -4712,14 +4675,12 @@ updateclientlist()
                 XA_WINDOW, 32, PropModeAppend,
                 (unsigned char *) &(c->win), 1);
 
-    #if NET_CLIENT_LIST_STACKING_PATCH
     XDeleteProperty(dpy, root, netatom[NetClientListStacking]);
     for (m = mons; m; m = m->next)
         for (c = m->stack; c; c = c->snext)
             XChangeProperty(dpy, root, netatom[NetClientListStacking],
                 XA_WINDOW, 32, PropModeAppend,
                 (unsigned char *) &(c->win), 1);
-    #endif // NET_CLIENT_LIST_STACKING_PATCH
 }
 
 int update_geom(void)

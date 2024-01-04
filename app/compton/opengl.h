@@ -122,12 +122,12 @@ glx_hasglext(session_t *ps, const char *ext) {
   return found;
 }
 
-static inline XVisualInfo *
-get_visualinfo_from_visual(session_t *ps, Visual *visual) {
-  XVisualInfo vreq = { .visualid = XVisualIDFromVisual(visual) };
-  int nitems = 0;
+static inline XVisualInfo* get_visualinfo_from_visual(session_t *ps, Visual *visual)
+{
+    XVisualInfo vreq = { .visualid = XVisualIDFromVisual(visual) };
+    int nitems = 0;
 
-  return XGetVisualInfo(ps->dpy, VisualIDMask, &vreq, &nitems);
+    return XGetVisualInfo(ps->dpy, VisualIDMask, &vreq, &nitems);
 }
 
 static bool

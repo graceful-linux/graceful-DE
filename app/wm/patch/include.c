@@ -98,9 +98,7 @@
 #if ASPECTRESIZE_PATCH
 #include "aspectresize.c"
 #endif
-#if 1||ATTACHABOVE_PATCH || ATTACHASIDE_PATCH || ATTACHBELOW_PATCH || ATTACHBOTTOM_PATCH || SEAMLESS_RESTART_PATCH
 #include "attachx.c"
-#endif
 #if AUTOSTART_PATCH
 #include "autostart.c"
 #endif
@@ -111,9 +109,7 @@
 #if COOL_AUTOSTART_PATCH
 #include "cool_autostart.c"
 #endif
-#if CYCLELAYOUTS_PATCH
 #include "cyclelayouts.c"
-#endif
 #if DECORATION_HINTS_PATCH
 #include "decorationhints.c"
 #endif
@@ -128,9 +124,7 @@
 #elif FSIGNAL_PATCH
 #include "fsignal.c"
 #endif
-#if EXRESIZE_PATCH
 #include "exresize.c"
-#endif
 #if !FAKEFULLSCREEN_PATCH && FAKEFULLSCREEN_CLIENT_PATCH
 #include "fakefullscreenclient.c"
 #endif
@@ -143,9 +137,7 @@
 #if FOCUSDIR_PATCH
 #include "focusdir.c"
 #endif
-#if FOCUSFOLLOWMOUSE_PATCH
 #include "focusfollowmouse.c"
-#endif
 #if FOCUSMASTER_PATCH || FOCUSMASTER_RETURN_PATCH
 #include "focusmaster.c"
 #endif
@@ -335,9 +327,7 @@
 #if XRDB_PATCH && !BAR_VTCOLORS_PATCH
 #include "xrdb.c"
 #endif
-#if DRAGMFACT_PATCH
 #include "dragmfact.c"
-#endif
 #if SEAMLESS_RESTART_PATCH
 #include "seamless_restart.c"
 #endif

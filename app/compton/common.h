@@ -1923,10 +1923,9 @@ bkend_use_xrender(session_t *ps) {
 /**
  * Check if current backend uses GLX.
  */
-static inline bool
-bkend_use_glx(session_t *ps) {
-  return BKEND_GLX == ps->o.backend
-    || BKEND_XR_GLX_HYBRID == ps->o.backend;
+static inline bool bkend_use_glx(session_t *ps)
+{
+    return BKEND_GLX == ps->o.backend || BKEND_XR_GLX_HYBRID == ps->o.backend;
 }
 
 /**
