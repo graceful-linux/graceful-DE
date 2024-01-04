@@ -137,7 +137,7 @@
 #if FOCUSDIR_PATCH
 #include "focusdir.c"
 #endif
-#include "focusfollowmouse.c"
+//#include "focusfollowmouse.c"
 #if FOCUSMASTER_PATCH || FOCUSMASTER_RETURN_PATCH
 #include "focusmaster.c"
 #endif
@@ -177,9 +177,7 @@
 #if MOVEPLACE_PATCH
 #include "moveplace.c"
 #endif
-#if MOVERESIZE_PATCH
 #include "moveresize.c"
-#endif
 #if MOVESTACK_PATCH
 #include "movestack.c"
 #endif

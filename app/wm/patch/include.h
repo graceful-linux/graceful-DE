@@ -130,7 +130,7 @@
 #if FOCUSADJACENTTAG_PATCH
 #include "focusadjacenttag.h"
 #endif
-#include "focusfollowmouse.h"
+//#include "focusfollowmouse.h"
 #if FOCUSMASTER_PATCH || FOCUSMASTER_RETURN_PATCH
 #include "focusmaster.h"
 #endif
@@ -166,9 +166,7 @@
 #if MOVEPLACE_PATCH
 #include "moveplace.h"
 #endif
-#if MOVERESIZE_PATCH
 #include "moveresize.h"
-#endif
 #if MOVESTACK_PATCH
 #include "movestack.h"
 #endif
