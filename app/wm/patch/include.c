@@ -3,9 +3,7 @@
 #include "bar_tagicons.c"
 #include "bar.c"
 
-#if BAR_ALPHA_PATCH
 #include "bar_alpha.c"
-#endif
 #if BAR_ALTERNATIVE_TAGS_PATCH
 #include "bar_alternativetags.c"
 #endif

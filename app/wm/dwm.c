@@ -3585,17 +3585,17 @@ void setup(void)
         setitimer (ITIMER_REAL, &timer, NULL);
     }
 
-    struct sigaction sa;
+    {
+        struct sigaction sa;
 
-    /* do not transform children into zombies when they terminate */
-    sigemptyset(&sa.sa_mask);
-    sa.sa_flags = SA_NOCLDSTOP | SA_NOCLDWAIT | SA_RESTART;
-    sa.sa_handler = SIG_IGN;
-    sigaction(SIGCHLD, &sa, NULL);
+        sigemptyset(&sa.sa_mask);
+        sa.sa_flags = SA_NOCLDSTOP | SA_NOCLDWAIT | SA_RESTART;
+        sa.sa_handler = SIG_IGN;
+        sigaction(SIGCHLD, &sa, NULL);
+    }
 
-    while (waitpid(-1, NULL, WNOHANG) > 0);
+    while (waitpid(-1, NULL, WNOHANG) > 0);             // 等待所有子进程退出
 
-    /* the one line of bloat that would have saved a lot of time for a lot of people */
     putenv("_JAVA_AWT_WM_NONREPARENTING=1");
 
     /* init screen */
@@ -3603,12 +3603,9 @@ void setup(void)
     sw = DisplayWidth(dpy, screen);
     sh = DisplayHeight(dpy, screen);
     root = RootWindow(dpy, screen);
-    #if BAR_ALPHA_PATCH
     xinit_visual();
     drw = drw_create(dpy, screen, root, sw, sh, visual, depth, cmap);
-    #else
-    drw = drw_create(dpy, screen, root, sw, sh);
-    #endif // BAR_ALPHA_PATCH
+
     if (!drw_font_create(drw, font)) {
         die("no fonts could be loaded.");
     }
@@ -3706,19 +3703,13 @@ void setup(void)
     scheme = ecalloc(LENGTH(colors), sizeof(Clr *));
     #endif // BAR_STATUS2D_PATCH
     for (i = 0; i < LENGTH(colors); i++)
-        #if BAR_ALPHA_PATCH
         scheme[i] = drw_scm_create(drw, colors[i], alphas[i], ColCount);
-        #else
-        scheme[i] = drw_scm_create(drw, colors[i], ColCount);
-        #endif // BAR_ALPHA_PATCH
+
     #if BAR_POWERLINE_STATUS_PATCH
     statusscheme = ecalloc(LENGTH(statuscolors), sizeof(Clr *));
     for (i = 0; i < LENGTH(statuscolors); i++)
-        #if BAR_ALPHA_PATCH
         statusscheme[i] = drw_scm_create(drw, statuscolors[i], alphas[0], ColCount);
-        #else
-        statusscheme[i] = drw_scm_create(drw, statuscolors[i], ColCount);
-        #endif // BAR_ALPHA_PATCH
+
     #endif // BAR_POWERLINE_STATUS_PATCH
 
     updatebars();
@@ -4385,13 +4376,10 @@ updatebars(void)
     Monitor *m;
     XSetWindowAttributes wa = {
         .override_redirect = True,
-        #if BAR_ALPHA_PATCH
         .background_pixel = 0,
         .border_pixel = 0,
         .colormap = cmap,
-        #else
-        .background_pixmap = ParentRelative,
-        #endif // BAR_ALPHA_PATCH
+
         #if BAR_TAGPREVIEW_PATCH
         .event_mask = ButtonPressMask|ExposureMask|PointerMotionMask
         #else
@@ -4404,15 +4392,9 @@ updatebars(void)
             if (bar->external)
                 continue;
             if (!bar->win) {
-                #if BAR_ALPHA_PATCH
                 bar->win = XCreateWindow(dpy, root, bar->bx, bar->by, bar->bw, bar->bh, 0, depth,
                                           InputOutput, visual,
                                           CWOverrideRedirect|CWBackPixel|CWBorderPixel|CWColormap|CWEventMask, &wa);
-                #else
-                bar->win = XCreateWindow(dpy, root, bar->bx, bar->by, bar->bw, bar->bh, 0, DefaultDepth(dpy, screen),
-                        CopyFromParent, DefaultVisual(dpy, screen),
-                        CWOverrideRedirect|CWBackPixmap|CWEventMask, &wa);
-                #endif // BAR_ALPHA_PATCH
                 XDefineCursor(dpy, bar->win, cursor[CurNormal]->cursor);
                 XMapRaised(dpy, bar->win);
                 XSetClassHint(dpy, bar->win, &ch);

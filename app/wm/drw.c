@@ -37,12 +37,7 @@ apply_fribidi(const char *str)
 Clr transcheme[3];
 #endif // BAR_POWERLINE_TAGS_PATCH | BAR_POWERLINE_STATUS_PATCH
 
-Drw *
-#if BAR_ALPHA_PATCH
-drw_create(Display *dpy, int screen, Window root, unsigned int w, unsigned int h, Visual *visual, unsigned int depth, Colormap cmap)
-#else
-drw_create(Display *dpy, int screen, Window root, unsigned int w, unsigned int h)
-#endif // BAR_ALPHA_PATCH
+Drw* drw_create(Display *dpy, int screen, Window root, unsigned int w, unsigned int h, Visual *visual, unsigned int depth, Colormap cmap)
 {
     Drw *drw = ecalloc(1, sizeof(Drw));
 
@@ -52,21 +47,15 @@ drw_create(Display *dpy, int screen, Window root, unsigned int w, unsigned int h
     drw->w = w;
     drw->h = h;
 
-    #if BAR_ALPHA_PATCH
     drw->visual = visual;
     drw->depth = depth;
     drw->cmap = cmap;
-    drw->drawable = XCreatePixmap(dpy, root, w, h, depth);
-    drw->picture = XRenderCreatePicture(dpy, drw->drawable, XRenderFindVisualFormat(dpy, visual), 0, NULL);
+    drw->drawable = XCreatePixmap(dpy, root, w, h, depth);                                                              // 创建可绘制界面
+    drw->picture = XRenderCreatePicture(dpy, drw->drawable, XRenderFindVisualFormat(dpy, visual), 0, NULL);             // 创建一个用于渲染的Picture对象，用于高级渲染操作，如：图像合成、阴影、透明度、颜色混合等
+                                                                                                                        // XRender 是 X11 扩展模块，提供了一种高级的图形渲染功能
     drw->gc = XCreateGC(dpy, drw->drawable, 0, NULL);
-    #else
-    drw->drawable = XCreatePixmap(dpy, root, w, h, DefaultDepth(dpy, screen));
-    #if BAR_WINICON_PATCH
-    drw->picture = XRenderCreatePicture(dpy, drw->drawable, XRenderFindVisualFormat(dpy, DefaultVisual(dpy, screen)), 0, NULL);
-    #endif // BAR_WINICON_PATCH
-    drw->gc = XCreateGC(dpy, root, 0, NULL);
-    #endif // BAR_ALPHA_PATCH
-    XSetLineAttributes(dpy, drw->gc, 1, LineSolid, CapButt, JoinMiter);
+
+    XSetLineAttributes(dpy, drw->gc, 1, LineSolid, CapRound, JoinRound);
 
     return drw;
 }
@@ -83,15 +72,8 @@ void drw_resize(Drw *drw, unsigned int w, unsigned int h)
     }
     if (drw->drawable)
         XFreePixmap(drw->dpy, drw->drawable);
-    #if BAR_ALPHA_PATCH
     drw->drawable = XCreatePixmap(drw->dpy, drw->root, w, h, drw->depth);
     drw->picture = XRenderCreatePicture(drw->dpy, drw->drawable, XRenderFindVisualFormat(drw->dpy, drw->visual), 0, NULL);
-    #else // !BAR_ALPHA_PATCH
-    drw->drawable = XCreatePixmap(drw->dpy, drw->root, w, h, DefaultDepth(drw->dpy, drw->screen));
-    #if BAR_WINICON_PATCH
-    drw->picture = XRenderCreatePicture(drw->dpy, drw->drawable, XRenderFindVisualFormat(drw->dpy, DefaultVisual(drw->dpy, drw->screen)), 0, NULL);
-    #endif // BAR_WINICON_PATCH
-    #endif // BAR_ALPHA_PATCH
 }
 
 void drw_free(Drw *drw)
@@ -168,61 +150,33 @@ void drw_fontset_free(Fnt *font)
     }
 }
 
-void
-drw_clr_create(
-    Drw *drw,
-    Clr *dest,
-    const char *clrname
-    #if BAR_ALPHA_PATCH
-    , unsigned int alpha
-    #endif // BAR_ALPHA_PATCH
-) {
+void drw_clr_create(Drw *drw, Clr *dest, const char *clrname, unsigned int alpha)
+{
     if (!drw || !dest || !clrname)
         return;
 
-    #if BAR_ALPHA_PATCH
-    if (!XftColorAllocName(drw->dpy, drw->visual, drw->cmap, clrname, dest))
+    if (!XftColorAllocName(drw->dpy, drw->visual, drw->cmap, clrname, dest)) {
         LOG_WARNING("warning, cannot allocate color '%s'", clrname);
+    }
 
     dest->pixel = (dest->pixel & 0x00ffffffU) | (alpha << 24);
-    #else
-    if (!XftColorAllocName(drw->dpy, DefaultVisual(drw->dpy, drw->screen), DefaultColormap(drw->dpy, drw->screen), clrname, dest))
-        #if DO_NOT_DIE_ON_COLOR_ALLOCATION_FAILURE_PATCH
-        fprintf(stderr, "warning, cannot allocate color '%s'", clrname);
-        #else
-        die("error, cannot allocate color '%s'", clrname);
-        #endif // DO_NOT_DIE_ON_COLOR_ALLOCATION_FAILURE_PATCH
-
-    #if NO_TRANSPARENT_BORDERS_PATCH
-    dest->pixel |= 0xff << 24;
-    #endif // NO_TRANSPARENT_BORDERS_PATCH
-    #endif // BAR_ALPHA_PATCH
 }
 
 /* Wrapper to create color schemes. The caller has to call free(3) on the
  * returned color scheme when done using it. */
-Clr *
-drw_scm_create(
-    Drw *drw,
-    char *clrnames[],
-    #if BAR_ALPHA_PATCH
-    const unsigned int alphas[],
-    #endif // BAR_ALPHA_PATCH
-    size_t clrcount
-) {
+Clr* drw_scm_create(Drw *drw, char *clrnames[], const unsigned int alphas[], size_t clrcount)
+{
     size_t i;
     Clr *ret;
 
-    /* need at least two colors for a scheme */
-    if (!drw || !clrnames || clrcount < 2 || !(ret = ecalloc(clrcount, sizeof(XftColor))))
+    if (!drw || !clrnames || clrcount < 2 || !(ret = ecalloc(clrcount, sizeof(XftColor)))) {
         return NULL;
+    }
 
-    for (i = 0; i < clrcount; i++)
-        #if BAR_ALPHA_PATCH
+    for (i = 0; i < clrcount; i++) {
         drw_clr_create(drw, &ret[i], clrnames[i], alphas[i]);
-        #else
-        drw_clr_create(drw, &ret[i], clrnames[i]);
-        #endif // BAR_ALPHA_PATCH
+    }
+
     return ret;
 }
 
@@ -279,16 +233,12 @@ int drw_text(Drw *drw, int x, int y, unsigned int w, unsigned int h, unsigned in
 
     if (!render) {
         w = ~w;
-    } else {
+    }
+    else {
         XSetForeground(drw->dpy, drw->gc, drw->scheme[invert ? ColFg : ColBg].pixel);
         XFillRectangle(drw->dpy, drw->drawable, drw->gc, x, y, w, h);
-        #if BAR_ALPHA_PATCH
         d = XftDrawCreate(drw->dpy, drw->drawable, drw->visual, drw->cmap);
-        #else
-        d = XftDrawCreate(drw->dpy, drw->drawable,
-                          DefaultVisual(drw->dpy, drw->screen),
-                          DefaultColormap(drw->dpy, drw->screen));
-        #endif // BAR_ALPHA_PATCH
+
         x += lpad;
         w -= lpad;
     }

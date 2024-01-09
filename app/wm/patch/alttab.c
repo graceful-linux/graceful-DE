@@ -77,13 +77,9 @@ drawtab(int nwins, int first, Monitor *m)
 	if (first) {
 		XSetWindowAttributes wa = {
 			.override_redirect = True,
-			#if BAR_ALPHA_PATCH
 			.background_pixel = 0,
 			.border_pixel = 0,
 			.colormap = cmap,
-			#else
-			.background_pixmap = ParentRelative,
-			#endif // BAR_ALPHA_PATCH
 			.event_mask = ButtonPressMask|ExposureMask
 		};
 
@@ -100,15 +96,9 @@ drawtab(int nwins, int first, Monitor *m)
 
 		h = maxhtab;
 
-		#if BAR_ALPHA_PATCH
 		alttabwin = XCreateWindow(dpy, root, px, py, maxwtab, maxhtab, 2, depth,
 		                             InputOutput, visual,
 		                             CWOverrideRedirect|CWBackPixel|CWBorderPixel|CWColormap|CWEventMask, &wa);
-		#else
-		alttabwin = XCreateWindow(dpy, root, px, py, maxwtab, maxhtab, 2, DefaultDepth(dpy, screen),
-		                             CopyFromParent, DefaultVisual(dpy, screen),
-		                             CWOverrideRedirect|CWBackPixmap|CWEventMask, &wa);
-		#endif // BAR_ALPHA_PATCH
 
 		XDefineCursor(dpy, alttabwin, cursor[CurNormal]->cursor);
 		XMapRaised(dpy, alttabwin);

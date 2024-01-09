@@ -229,7 +229,6 @@ static char selSPRLbgcolor[]             = "#555500";
 static char selfloatbgcolor[]            = "#117799";
 #endif // BAR_FLEXWINTITLE_PATCH
 
-#if BAR_ALPHA_PATCH
 static const unsigned int baralpha = 0xd0;
 static const unsigned int borderalpha = OPAQUE;
 static const unsigned int alphas[][3] = {
@@ -283,7 +282,6 @@ static const unsigned int alphas[][3] = {
 	[SchemeFlexSelFloat] = { OPAQUE, baralpha, borderalpha },
 	#endif // BAR_FLEXWINTITLE_PATCH
 };
-#endif // BAR_ALPHA_PATCH
 static const char title_bg_dark[]   = "#303030";
 static const char title_bg_light[]  = "#fdfdfd";
 static const int color_ptrs[][ColCount] = {
