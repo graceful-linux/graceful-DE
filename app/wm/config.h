@@ -30,25 +30,13 @@ static const unsigned int gappov         = 3;  /* vert outer gap between windows
 static const int smartgaps_fact          = 1;   /* gap factor when there is only one client; 0 = no gaps, 3 = 3x outer gaps */
 #endif // VANITYGAPS_PATCH
 
-#if BAR_ANYBAR_PATCH
-static const int usealtbar               = 1;        /* 1 means use non-dwm status bar */
-static const char *altbarclass           = "Polybar"; /* Alternate bar class name */
-static const char *altbarcmd             = "$HOME/bar.sh"; /* Alternate bar launch command */
-#endif // BAR_ANYBAR_PATCH
+
 #if BAR_HOLDBAR_PATCH
 static const int showbar                 = 0;   /* 0 means no bar */
 #else
 static const int showbar                 = 1;   /* 0 means no bar */
 #endif // BAR_HOLDBAR_PATCH
 static const int topbar                  = 1;   /* 0 means bottom bar */
-#if TAB_PATCH
-/*  Display modes of the tab bar: never shown, always shown, shown only in  */
-/*  monocle mode in the presence of several windows.                        */
-/*  Modes after showtab_nmodes are disabled.                                */
-enum showtab_modes { showtab_never, showtab_auto, showtab_nmodes, showtab_always};
-static const int showtab                 = showtab_auto;        /* Default tab bar show mode */
-static const int toptab                  = False;               /* False means bottom tab bar */
-#endif // TAB_PATCH
 static const int bar_height              = 32;  /* 0 means derive from font, >= 1 explicit height */
 #if BAR_PADDING_PATCH
 static const int vertpad                 = 10;  /* vertical padding of bar */
@@ -79,10 +67,8 @@ static const int statusmon               = 0;
 #else
 static const int statusmon               = 'A';
 #endif // BAR_STATUSALLMONS_PATCH | BAR_STATICSTATUS_PATCH
-#if BAR_STATUSPADDING_PATCH
-static const int horizpadbar             = 2;   /* horizontal padding for statusbar */
-static const int vertpadbar              = 0;   /* vertical padding for statusbar */
-#endif // BAR_STATUSPADDING_PATCH
+static const int horizpadbar             = 2;   /* 水平间隔 horizontal padding for statusbar */
+static const int vertpadbar              = 0;   /* 垂直间隔 vertical padding for statusbar */
 static const unsigned int systrayspacing = 2;   /* systray spacing */
 static const int showsystray             = 1;   /* 0 means no systray */
 static const unsigned int ulinepad = 5;         /* horizontal padding between the underline and tag */
@@ -484,15 +470,6 @@ static const MonitorRule monrules[] = {
 #endif // PERTAG_PATCH
 #endif // MONITOR_RULES_PATCH
 
-#if INSETS_PATCH
-static const Inset default_inset = {
-	.x = 0,
-	.y = 30,
-	.w = 0,
-	.h = 0,
-};
-#endif // INSETS_PATCH
-
 /* Bar rules allow you to configure what is shown where on the bar, as well as
  * introducing your own bar modules.
  *
@@ -837,9 +814,6 @@ static const Key keys[] = {
 	#if TOGGLETOPBAR_PATCH
 	{ MODKEY|ShiftMask,             XK_b,          toggletopbar,           {0} },
 	#endif // TOGGLETOPBAR_PATCH
-	#if TAB_PATCH
-	{ MODKEY|ControlMask,           XK_b,          tabmode,                {-1} },
-	#endif // TAB_PATCH
 	#if FOCUSMASTER_PATCH || FOCUSMASTER_RETURN_PATCH
 	{ MODKEY|ControlMask,           XK_space,      focusmaster,            {0} },
 	#endif // FOCUSMASTER_PATCH / FOCUSMASTER_RETURN_PATCH
@@ -917,10 +891,7 @@ static const Key keys[] = {
 	#if DISTRIBUTETAGS_PATCH
 	{ MODKEY|ControlMask,           XK_d,          distributetags,         {0} },
 	#endif // DISTRIBUTETAGS_PATCH
-	#if INSETS_PATCH
-	{ MODKEY|ShiftMask|ControlMask, XK_a,          updateinset,            {.v = &default_inset } },
-	#endif // INSETS_PATCH
-//	{ MODKEY,                       XK_Return,     zoom,                   {0} },
+
 	#if VANITYGAPS_PATCH
 	{ MODKEY|Mod4Mask,              XK_u,          incrgaps,               {.i = +1 } },
 	{ MODKEY|Mod4Mask|ShiftMask,    XK_u,          incrgaps,               {.i = -1 } },
@@ -1295,9 +1266,6 @@ static const Button buttons[] = {
 	{ ClkTagBar,            0,                   Button3,        toggleview,     {0} },
 	{ ClkTagBar,            MODKEY,              Button1,        tag,            {0} },
 	{ ClkTagBar,            MODKEY,              Button3,        toggletag,      {0} },
-	#if TAB_PATCH
-	{ ClkTabBar,            0,                   Button1,        focuswin,       {0} },
-	#endif // TAB_PATCH
 };
 
 #if DWMC_PATCH

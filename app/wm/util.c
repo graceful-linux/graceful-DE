@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "log.h"
 #include "util.h"
 
 void die(const char *fmt, ...)
@@ -29,7 +30,7 @@ void* ecalloc(size_t nmemb, size_t size)
     void *p;
 
     if (!(p = calloc(nmemb, size))) {
-        die("calloc:");
+        LOG_DIE("calloc:");
     }
 
     return p;

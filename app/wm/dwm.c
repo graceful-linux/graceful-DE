@@ -77,18 +77,11 @@
 #define NUMTAGS                 9
 #define NUMVIEWHIST             NUMTAGS
 #define BARRULES                20
-#if TAB_PATCH
-#define MAXTABS                 50
-#endif // TAB_PATCH
 #define BUTTONMASK              (ButtonPressMask|ButtonReleaseMask)
 #define CLEANMASK(mask)         (mask & ~(numlockmask|LockMask) & (ShiftMask|ControlMask|Mod1Mask|Mod2Mask|Mod3Mask|Mod4Mask|Mod5Mask))
-#if BAR_ANYBAR_PATCH
-#define INTERSECT(x,y,w,h,m)    (MAX(0, MIN((x)+(w),(m)->mx+(m)->mw) - MAX((x),(m)->mx)) \
-                               * MAX(0, MIN((y)+(h),(m)->my+(m)->mh) - MAX((y),(m)->my)))
-#else
+
 #define INTERSECT(x,y,w,h,m)    (MAX(0, MIN((x)+(w),(m)->wx+(m)->ww) - MAX((x),(m)->wx)) \
                                * MAX(0, MIN((y)+(h),(m)->wy+(m)->wh) - MAX((y),(m)->wy)))
-#endif // BAR_ANYBAR_PATCH
 #if ATTACHASIDE_PATCH && STICKY_PATCH
 #define ISVISIBLEONTAG(C, T)    ((C->tags & T) || C->issticky)
 #define ISVISIBLE(C)            ISVISIBLEONTAG(C, C->mon->tagset[C->mon->seltags])
@@ -219,9 +212,6 @@ enum {
 #endif // SEAMLESS_RESTART_PATCH
 
 enum {
-    #if TAB_PATCH
-    ClkTabBar,
-    #endif // TAB_PATCH
     ClkTagBar,
     ClkLtSymbol,
     ClkStatusText,
@@ -427,19 +417,11 @@ typedef struct {
     #endif // FLEXTILE_DELUXE_LAYOUT
 } Layout;
 
-#if INSETS_PATCH
-typedef struct {
-    int x;
-    int y;
-    int w;
-    int h;
-} Inset;
-#endif // INSETS_PATCH
-
 #if PERTAG_PATCH
 typedef struct Pertag Pertag;
 #endif // PERTAG_PATCH
-struct Monitor {
+struct Monitor
+{
     char ltsymbol[16];
     float mfact;
     #if FLEXTILE_DELUXE_LAYOUT
@@ -448,11 +430,10 @@ struct Monitor {
     #endif // FLEXTILE_DELUXE_LAYOUT
     int nmaster;
     int num;
-    int mx, my, mw, mh;   /* screen size */
-    int wx, wy, ww, wh;   /* window area  */
-    #if TAB_PATCH
-    int ty;               /* tab bar geometry */
-    #endif // TAB_PATCH
+
+    int mx, my, mw, mh;     // 可用区域   /* screen size */
+    int wx, wy, ww, wh;     /* window area  */
+
     #if VANITYGAPS_PATCH
     int gappih;           /* horizontal gap between windows */
     int gappiv;           /* vertical gap between windows */
@@ -470,13 +451,6 @@ struct Monitor {
     unsigned int tagset[2];
     #endif // VIEW_HISTORY_PATCH
     int showbar;
-    #if TAB_PATCH
-    int showtab;
-    int toptab;
-    Window tabwin;
-    int ntabs;
-    int tab_widths[MAXTABS];
-    #endif // TAB_PATCH
     Client *clients;
     Client *sel;
     Client *stack;
@@ -484,7 +458,7 @@ struct Monitor {
     Client *tagmarked[32];
     #endif // FOCUSMASTER_RETURN_PATCH
     Monitor *next;
-    Bar *bar;
+    Bar*    bar;
     const Layout *lt[2];
     #if BAR_ALTERNATIVE_TAGS_PATCH
     unsigned int alttag;
@@ -492,9 +466,6 @@ struct Monitor {
     #if PERTAG_PATCH
     Pertag *pertag;
     #endif // PERTAG_PATCH
-    #if INSETS_PATCH
-    Inset inset;
-    #endif // INSETS_PATCH
     #if IPC_PATCH
     char lastltsymbol[16];
     TagState tagstate;
@@ -703,6 +674,10 @@ static int xerror(Display *dpy, XErrorEvent *ee);
 static int xerrordummy(Display *dpy, XErrorEvent *ee);
 static int xerror_start(Display *dpy, XErrorEvent *ee);
 
+
+int update_geom(void);
+void update_bar_pos(Monitor *m);
+
 /* bar functions */
 
 #include "patch/include.h"
@@ -803,7 +778,7 @@ static Cur *cursor[CurLast];
 static Clr **scheme;
 static Display *dpy;
 static Drw *drw;
-static Monitor *mons, *selmon;
+static Monitor *mons, *selmon;                      // selmon：当前焦点屏幕，mons：表示所有屏幕列表
 static Window root, wmcheckwin;
 
 /* configuration, allows nested code to access above variables */
@@ -1090,17 +1065,12 @@ arrange(Monitor *m)
 void
 arrangemon(Monitor *m)
 {
-    #if TAB_PATCH
-    updatebarpos(m);
-    XMoveResizeWindow(dpy, m->tabwin, m->wx, m->ty, m->ww, th);
-    #endif // TAB_PATCH
     strncpy(m->ltsymbol, m->lt[m->sellt]->symbol, sizeof m->ltsymbol);
     if (m->lt[m->sellt]->arrange)
         m->lt[m->sellt]->arrange(m);
 }
 
-void
-attach(Client *c)
+void attach(Client *c)
 {
     c->next = c->mon->clients;
     c->mon->clients = c;
@@ -1117,9 +1087,7 @@ void
 buttonpress(XEvent *e)
 {
     int click, i, r;
-    #if TAB_PATCH
-    int x;
-    #endif // TAB_PATCH
+
     Arg arg = {0};
     Client *c;
     Monitor *m;
@@ -1167,25 +1135,7 @@ buttonpress(XEvent *e)
         }
     }
 
-    #if TAB_PATCH
-    if (ev->window == selmon->tabwin) {
-        for (i = 0, x = 0, c = selmon->clients; c; c = c->next) {
-            if (!ISVISIBLE(c) || HIDDEN(c))
-                continue;
-            x += selmon->tab_widths[i];
-            if (ev->x > x)
-                ++i;
-            else
-                break;
-            if (i >= m->ntabs)
-                break;
-        }
-        if (c) {
-            click = ClkTabBar;
-            arg.ui = i;
-        }
-    }
-    #endif // TAB_PATCH
+
 
     if (click == ClkRootWin && (c = win_to_client(ev->window))) {
         #if FOCUSONCLICK_PATCH
@@ -1205,9 +1155,6 @@ buttonpress(XEvent *e)
             buttons[i].func(
                 (
                     click == ClkTagBar
-                    #if TAB_PATCH
-                    || click == ClkTabBar
-                    #endif // TAB_PATCH
                     #if BAR_WINTITLEACTIONS_PATCH
                     || click == ClkWinTitle
                     #endif // BAR_WINTITLEACTIONS_PATCH
@@ -1304,10 +1251,7 @@ void cleanup_mon(Monitor *mon)
             systray->bar = NULL;
         free(bar);
     }
-    #if TAB_PATCH
-    XUnmapWindow(dpy, mon->tabwin);
-    XDestroyWindow(dpy, mon->tabwin);
-    #endif // TAB_PATCH
+
     #if PERTAG_PATCH
     free(mon->pertag);
     #endif // PERTAG_PATCH
@@ -1474,9 +1418,7 @@ void configurerequest(XEvent *e)
 {
     Client *c;
     Monitor *m;
-    #if BAR_ANYBAR_PATCH
-    Bar *bar;
-    #endif // BAR_ANYBAR_PATCH
+
     XConfigureRequestEvent *ev = &e->xconfigurerequest;
     XWindowChanges wc;
 
@@ -1534,15 +1476,7 @@ void configurerequest(XEvent *e)
     } else {
         wc.x = ev->x;
         wc.y = ev->y;
-        #if BAR_ANYBAR_PATCH
-        m = win_to_mon(ev->window);
-        for (bar = m->bar; bar; bar = bar->next) {
-            if (bar->win == ev->window) {
-                wc.y = bar->by;
-                wc.x = bar->bx;
-            }
-        }
-        #endif // BAR_ANYBAR_PATCH
+
         wc.width = ev->width;
         wc.height = ev->height;
         wc.border_width = ev->border_width;
@@ -1583,11 +1517,7 @@ Monitor* create_mon(void)
     m->nstack = nstack;
     #endif // FLEXTILE_DELUXE_LAYOUT
     m->showbar = showbar;
-    #if TAB_PATCH
-    m->showtab = showtab;
-    m->toptab = toptab;
-    m->ntabs = 0;
-    #endif // TAB_PATCH
+
     #if SETBORDERPX_PATCH
     m->borderpx = borderpx;
     #endif // SETBORDERPX_PATCH
@@ -1747,19 +1677,13 @@ Monitor* create_mon(void)
     restoremonitorstate(m);
     #endif // SEAMLESS_RESTART_PATCH
 
-    #if INSETS_PATCH
-    m->inset = default_inset;
-    #endif // INSETS_PATCH
     return m;
 }
 
 void destroy_notify(XEvent *e)
 {
     Client *c;
-    #if BAR_ANYBAR_PATCH
-    Monitor *m;
-    Bar *bar;
-    #endif // BAR_ANYBAR_PATCH
+
     XDestroyWindowEvent *ev = &e->xdestroywindow;
 
     if ((c = win_to_client(ev->window)))
@@ -1770,17 +1694,6 @@ void destroy_notify(XEvent *e)
         removesystrayicon(c);
         drawbarwin(systray->bar);
     }
-    #if BAR_ANYBAR_PATCH
-    else {
-         m = win_to_mon(ev->window);
-         for (bar = m->bar; bar; bar = bar->next) {
-             if (bar->win == ev->window) {
-                unmanagealtbar(ev->window);
-                break;
-            }
-        }
-    }
-    #endif // BAR_ANYBAR_PATCH
 }
 
 void
@@ -1816,8 +1729,7 @@ detachstack(Client *c)
     c->snext = NULL;
 }
 
-Monitor *
-dirtomon(int dir)
+Monitor* dirtomon(int dir)
 {
     Monitor *m = NULL;
 
@@ -2022,9 +1934,6 @@ void expose(XEvent *e)
 
     if (ev->count == 0 && (m = win_to_mon(ev->window))) {
         drawbar(m);
-        #if TAB_PATCH
-        drawtabs();
-        #endif // TAB_PATCH
     }
 }
 
@@ -2194,8 +2103,7 @@ getatomprop(Client *c, Atom prop, Atom req)
     return atom;
 }
 
-int
-getrootptr(int *x, int *y)
+int getrootptr(int *x, int *y)
 {
     int di;
     unsigned int dui;
@@ -2331,7 +2239,6 @@ incnmaster(const Arg *arg)
     arrange(selmon);
 }
 
-#ifdef XINERAMA
 static int is_unique_geom(XineramaScreenInfo *unique, size_t n, XineramaScreenInfo *info)
 {
     while (n--) {
@@ -2345,7 +2252,6 @@ static int is_unique_geom(XineramaScreenInfo *unique, size_t n, XineramaScreenIn
 
     return 1;
 }
-#endif /* XINERAMA */
 
 void
 #if KEYMODES_PATCH
@@ -2641,11 +2547,7 @@ void maprequest(XEvent *e)
 
     if (!XGetWindowAttributes(dpy, ev->window, &wa) || wa.override_redirect)
         return;
-    #if BAR_ANYBAR_PATCH
-    if (wmclasscontains(ev->window, altbarclass, ""))
-        managealtbar(ev->window, &wa);
-    else
-    #endif // BAR_ANYBAR_PATCH
+
     if (!win_to_client(ev->window))
         manage(ev->window, &wa);
 }
@@ -2848,18 +2750,12 @@ propertynotify(XEvent *e)
             updatewmhints(c);
             if (c->isurgent)
                 drawbars();
-            #if TAB_PATCH
-            drawtabs();
-            #endif // TAB_PATCH
             break;
         }
         if (ev->atom == XA_WM_NAME || ev->atom == netatom[NetWMName]) {
             updatetitle(c);
             if (c == c->mon->sel)
                 drawbar(c->mon);
-            #if TAB_PATCH
-            drawtab(c->mon);
-            #endif // TAB_PATCH
         }
         #if DECORATION_HINTS_PATCH
         if (ev->atom == motifatom)
@@ -2894,17 +2790,18 @@ quit(const Arg *arg)
     #endif // ONLYQUITONEMPTY_PATCH
 }
 
-Monitor *
-recttomon(int x, int y, int w, int h)
+Monitor* recttomon(int x, int y, int w, int h)
 {
     Monitor *m, *r = selmon;
     int a, area = 0;
 
-    for (m = mons; m; m = m->next)
+    for (m = mons; m; m = m->next) {
         if ((a = INTERSECT(x, y, w, h, m)) > area) {
             area = a;
             r = m;
         }
+    }
+
     return r;
 }
 
@@ -3105,9 +3002,7 @@ restack(Monitor *m)
     #endif // WARP_PATCH
 
     drawbar(m);
-    #if TAB_PATCH
-    drawtab(m);
-    #endif // TAB_PATCH
+
     if (!m->sel)
         return;
     if (m->sel->isfloating || !m->lt[m->sellt]->arrange)
@@ -3224,11 +3119,7 @@ void scan(void)
             if (!XGetWindowAttributes(dpy, wins[i], &wa)
             || wa.override_redirect || XGetTransientForHint(dpy, wins[i], &d1))
                 continue;
-            #if BAR_ANYBAR_PATCH
-            if (wmclasscontains(wins[i], altbarclass, ""))
-                managealtbar(wins[i], &wa);
-            else
-            #endif // BAR_ANYBAR_PATCH
+
             if (wa.map_state == IsViewable || getstate(wins[i]) == IconicState)
                 manage(wins[i], &wa);
             else if (gettextprop(wins[i], netatom[NetClientList], swin, sizeof swin))
@@ -3567,9 +3458,9 @@ void setup(void)
     // timer for date time
     {
         // FIXME:// 重新实现时间显示
-        struct sigaction timerSA;
         struct itimerval timer;
 
+        struct sigaction timerSA;
         sigemptyset(&timerSA.sa_mask);
 
         timerSA.sa_flags = 0;
@@ -3587,8 +3478,8 @@ void setup(void)
 
     {
         struct sigaction sa;
-
         sigemptyset(&sa.sa_mask);
+
         sa.sa_flags = SA_NOCLDSTOP | SA_NOCLDWAIT | SA_RESTART;
         sa.sa_handler = SIG_IGN;
         sigaction(SIGCHLD, &sa, NULL);
@@ -3607,24 +3498,13 @@ void setup(void)
     drw = drw_create(dpy, screen, root, sw, sh, visual, depth, cmap);
 
     if (!drw_font_create(drw, font)) {
-        die("no fonts could be loaded.");
+        LOG_DIE("no fonts could be loaded.");
     }
 
-    #if BAR_STATUSPADDING_PATCH
     lrpad = drw->fonts->h + horizpadbar;
     bh = drw->fonts->h + vertpadbar;
-    #else
-    lrpad = drw->fonts->h;
-    #if BAR_HEIGHT_PATCH
-    bh = bar_height ? bar_height : drw->fonts->h + 2;
-    #else
-    bh = drw->fonts->h + 2;
-    #endif // BAR_HEIGHT_PATCH
-    #endif // BAR_STATUSPADDING_PATCH
-    #if TAB_PATCH
-    th = bh;
-    #endif // TAB_PATCH
-    update_geom();
+
+    update_geom();                                      // 更新 bar 位置、屏幕位置 和 大小
 
     // 初始化时间
     gsCustomStatusAtoms[CUSTOM_STATUS_TIME] = XInternAtom (dpy, "CUSTOM_STATUS_TIME", False);
@@ -3760,10 +3640,6 @@ void setup(void)
     #if IPC_PATCH
     setupepoll();
     #endif // IPC_PATCH
-    #if BAR_ANYBAR_PATCH
-    if (usealtbar)
-        spawnbar();
-    #endif // BAR_ANYBAR_PATCH
 }
 
 
@@ -4337,10 +4213,7 @@ unmanage(Client *c, int destroyed)
 void unmap_notify(XEvent *e)
 {
     Client *c;
-    #if BAR_ANYBAR_PATCH
-    Monitor *m;
-    Bar *bar;
-    #endif // BAR_ANYBAR_PATCH
+
     XUnmapEvent *ev = &e->xunmap;
 
     if ((c = win_to_client(ev->window))) {
@@ -4356,21 +4229,9 @@ void unmap_notify(XEvent *e)
         removesystrayicon(c);
         drawbarwin(systray->bar);
     }
-    #if BAR_ANYBAR_PATCH
-    else {
-         m = win_to_mon(ev->window);
-         for (bar = m->bar; bar; bar = bar->next) {
-             if (bar->win == ev->window) {
-                unmanagealtbar(ev->window);
-                break;
-            }
-        }
-    }
-    #endif // BAR_ANYBAR_PATCH
 }
 
-void
-updatebars(void)
+void updatebars(void)
 {
     Bar *bar;
     Monitor *m;
@@ -4400,99 +4261,44 @@ updatebars(void)
                 XSetClassHint(dpy, bar->win, &ch);
             }
         }
-        #if TAB_PATCH
-        if (!m->tabwin) {
-            #if BAR_ALPHA_PATCH
-            m->tabwin = XCreateWindow(dpy, root, m->wx, m->ty, m->ww, th, 0, depth,
-                            InputOutput, visual,
-                            CWOverrideRedirect|CWBackPixel|CWBorderPixel|CWColormap|CWEventMask, &wa);
-            #else
-            m->tabwin = XCreateWindow(dpy, root, m->wx, m->ty, m->ww, th, 0, DefaultDepth(dpy, screen),
-                            CopyFromParent, DefaultVisual(dpy, screen),
-                            CWOverrideRedirect|CWBackPixmap|CWEventMask, &wa);
-            #endif // BAR_ALPHA_PATCH
-            XDefineCursor(dpy, m->tabwin, cursor[CurNormal]->cursor);
-            XMapRaised(dpy, m->tabwin);
-        }
-        #endif // TAB_PATCH
     }
 }
 
 void update_bar_pos(Monitor *m)
 {
-    #if TAB_PATCH
-    Client *c;
-    int nvis = 0;
-    #endif // TAB_PATCH
-
     m->wx = m->mx;
     m->wy = m->my;
     m->ww = m->mw;
     m->wh = m->mh;
-    Bar *bar;
+
+    Bar* bar = NULL;
     int y_pad = 0;
     int x_pad = 0;
-    #if BAR_PADDING_VANITYGAPS_PATCH && VANITYGAPS_PATCH
-    #if PERTAG_VANITYGAPS_PATCH && PERTAG_PATCH
-    if (!selmon || selmon->pertag->enablegaps[selmon->pertag->curtag])
-    #else
-    if (enablegaps)
-    #endif // PERTAG_VANITYGAPS_PATCH
-    {
-        y_pad = gappoh;
-        x_pad = gappov;
-    }
-    #elif BAR_PADDING_PATCH
-    y_pad = vertpad;
-    x_pad = sidepad;
-    #endif // BAR_PADDING_PATCH | BAR_PADDING_VANITYGAPS_PATCH
-
-    #if INSETS_PATCH
-    // Custom insets
-    Inset inset = m->inset;
-    m->wx += inset.x;
-    m->wy += inset.y;
-    m->ww -= inset.w + inset.x;
-    m->wh -= inset.h + inset.y;
-    #endif // INSETS_PATCH
 
     for (bar = m->bar; bar; bar = bar->next) {
         bar->bx = m->wx + x_pad;
-        #if BAR_ANYBAR_PATCH && !BAR_ANYBAR_MANAGE_WIDTH_PATCH
-        if (bar->external)
-            continue;
-        #endif // BAR_ANYBAR_PATCH | BAR_ANYBAR_MANAGE_WIDTH_PATCH
         bar->bw = m->ww - 2 * x_pad;
     }
 
-    for (bar = m->bar; bar; bar = bar->next)
-        if (!m->showbar || !bar->showbar)
-            bar->by = -bar->bh - y_pad;
-
-    #if TAB_PATCH
-    for (c = m->clients; c; c = c->next) {
-        if (ISVISIBLE(c) && !HIDDEN(c))
-            ++nvis;
-    }
-
-    if (m->showtab == showtab_always
-       || ((m->showtab == showtab_auto) && (nvis > 1) && (m->lt[m->sellt]->arrange == monocle))) {
-        m->wh -= th;
-        m->ty = m->toptab ? m->wy : m->wy + m->wh;
-        if (m->toptab)
-            m->wy += th;
-    } else {
-        m->ty = -th;
-    }
-    #endif // TAB_PATCH
-
-    if (!m->showbar)
-        return;
     for (bar = m->bar; bar; bar = bar->next) {
-        if (!bar->showbar)
+        if (!m->showbar || !bar->showbar) {
+            bar->by = -bar->bh - y_pad;
+        }
+    }
+
+    if (!m->showbar) {
+        return;
+    }
+
+    for (bar = m->bar; bar; bar = bar->next) {
+        if (!bar->showbar) {
             continue;
-        if (bar->topbar)
+        }
+
+        if (bar->topbar) {
             m->wy = m->wy + bar->bh + y_pad;
+        }
+
         m->wh -= y_pad + bar->bh;
         bar->by = (bar->topbar ? m->wy - bar->bh : m->wy + m->wh);
     }
@@ -4522,19 +4328,20 @@ int update_geom(void)
 {
     int dirty = 0;
 
+    // FIXME:// 拔掉第二屏后，第二屏上的窗口不会自动回到第一屏
     if (XineramaIsActive(dpy)) {
         int i, j, n, nn;
-        Client* c;
-        Monitor* m;
-        XineramaScreenInfo *info = XineramaQueryScreens(dpy, &nn);
-        XineramaScreenInfo *unique = NULL;
+        Client* c = NULL;
+        Monitor* m = NULL;
+        XineramaScreenInfo* info = XineramaQueryScreens(dpy, &nn);                      // nn 表示 屏幕 数量
+        XineramaScreenInfo* unique = NULL;
         if (G_UNLIKELY(!info)) {
             LOG_ERROR("XineramaQueryScreens failed!");
         }
+
         LOG_INFO("screen number: %d", nn);
 
-        for (n = 0, m = mons; m; m = m->next, n++);
-        /* only consider unique geometries as separate screens */
+        for (n = 0, m = mons; m; m = m->next, n++);                                     // n 表示屏幕数量
         unique = ecalloc(nn, sizeof(XineramaScreenInfo));
         for (i = 0, j = 0; i < nn; i++) {
             if (is_unique_geom (unique, j, &info[i])) {
@@ -4542,13 +4349,11 @@ int update_geom(void)
             }
         }
         XFree(info);
-        nn = j;
-        #if SORTSCREENS_PATCH
-        sortscreens(unique, nn);
-        #endif
-        /* new monitors if nn > n */
+        nn = j;                                                                         // j 表示去掉重复屏幕后的屏幕数量
+        sort_screens(unique, nn);                                                       // 按屏幕 (x, y) 座标位置排序
+
         for (i = n; i < nn; i++) {
-            for (m = mons; m && m->next; m = m->next);
+            for (m = mons; m && m->next; m = m->next);                                  // FIXME:// 链表尾插，此处数据结构应该被替换
             if (m) {
                 m->next = create_mon();
             }
@@ -4557,7 +4362,7 @@ int update_geom(void)
             }
         }
 
-        for (i = 0, m = mons; i < nn && m; m = m->next, i++) {
+        for (i = 0, m = mons; i < nn && m; m = m->next, i++) {                          //
             if ((i >= n) || (unique[i].x_org != m->mx) || (unique[i].y_org != m->my) || (unique[i].width != m->mw) || (unique[i].height != m->mh)) {
                 dirty = 1;
                 m->num = i;
@@ -4565,7 +4370,7 @@ int update_geom(void)
                 m->my = m->wy = unique[i].y_org;
                 m->mw = m->ww = unique[i].width;
                 m->mh = m->wh = unique[i].height;
-                update_bar_pos (m);
+                update_bar_pos (m);                                                     // 根据是否显示 bar 来确定屏幕的显示区域 和 bar 的显示区域
             }
         }
 

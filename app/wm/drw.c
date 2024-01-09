@@ -57,7 +57,7 @@ Drw* drw_create(Display *dpy, int screen, Window root, unsigned int w, unsigned 
 
     XSetLineAttributes(dpy, drw->gc, 1, LineSolid, CapRound, JoinRound);
 
-    return drw;
+    return drw;                                                                                                         // drw：整个 根窗口 绘制相关
 }
 
 void drw_resize(Drw *drw, unsigned int w, unsigned int h)
@@ -88,28 +88,18 @@ void drw_free(Drw *drw)
 /* This function is an implementation detail. Library users should use
  * drw_font_create instead.
  */
-static Fnt* xfont_create(Drw *drw, const char *fontname)
+static Fnt* xfont_create(Drw *drw, const char *fontName)
 {
-    Fnt *font;
-    PangoFontMap *fontmap;
-    PangoContext *context;
-    PangoFontDescription *desc;
-    PangoFontMetrics *metrics;
-
-    if (!fontname) {
-        die("no font specified.");
-    }
-
-    font = ecalloc(1, sizeof(Fnt));
+    Fnt* font = ecalloc(1, sizeof(Fnt));
     font->dpy = drw->dpy;
 
-    fontmap = pango_xft_get_font_map(drw->dpy, drw->screen);
-    context = pango_font_map_create_context(fontmap);
-    desc = pango_font_description_from_string(fontname);
+    PangoFontMap* fontMap = pango_xft_get_font_map(drw->dpy, drw->screen);
+    PangoContext* context = pango_font_map_create_context(fontMap);
+    PangoFontDescription* desc = pango_font_description_from_string(fontName);
     font->layout = pango_layout_new(context);
     pango_layout_set_font_description(font->layout, desc);
 
-    metrics = pango_context_get_metrics(context, desc, pango_language_from_string ("en-us"));
+    PangoFontMetrics* metrics = pango_context_get_metrics(context, desc, pango_language_from_string ("en-us"));
     font->h = pango_font_metrics_get_height(metrics) / PANGO_SCALE;
 
     pango_font_metrics_unref(metrics);
@@ -120,10 +110,6 @@ static Fnt* xfont_create(Drw *drw, const char *fontname)
 
 static void xfont_free(Fnt *font)
 {
-    if (!font) {
-        return;
-    }
-
     if (font->layout) {
         g_object_unref(font->layout);
     }
@@ -135,8 +121,10 @@ Fnt* drw_font_create(Drw* drw, const char font[])
 {
     Fnt *fnt = NULL;
 
-    if (!drw || !font)
+    if (!drw || !font) {
+        LOG_WARNING("drw_font_create error: (!draw || !font");
         return NULL;
+    }
 
     fnt = xfont_create(drw, font);
 

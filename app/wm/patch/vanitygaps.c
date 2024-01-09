@@ -81,26 +81,17 @@ setgapsex(const Arg *arg)
 static void
 togglegaps(const Arg *arg)
 {
-	#if PERTAG_VANITYGAPS_PATCH && PERTAG_PATCH
-	selmon->pertag->enablegaps[selmon->pertag->curtag] = !selmon->pertag->enablegaps[selmon->pertag->curtag];
-	#else
-	enablegaps = !enablegaps;
-	#endif // PERTAG_VANITYGAPS_PATCH
+#if PERTAG_VANITYGAPS_PATCH && PERTAG_PATCH
+    selmon->pertag->enablegaps[selmon->pertag->curtag] = !selmon->pertag->enablegaps[selmon->pertag->curtag];
+#else
+    enablegaps = !enablegaps;
+#endif // PERTAG_VANITYGAPS_PATCH
 
-	#if BAR_PADDING_VANITYGAPS_PATCH
-	updatebarpos(selmon);
-	for (Bar *bar = selmon->bar; bar; bar = bar->next)
-		XMoveResizeWindow(dpy, bar->win, bar->bx, bar->by, bar->bw, bar->bh);
-
-	#if BAR_SYSTRAY_PATCH
-	drawbarwin(systray->bar);
-	#endif // BAR_SYSTRAY_PATCH
-	#endif // BAR_PADDING_VANITYGAPS_PATCH
-	#if PERTAG_VANITYGAPS_PATCH && PERTAG_PATCH
-	arrange(selmon);
-	#else
-	arrange(NULL);
-	#endif // PERTAG_VANITYGAPS_PATCH
+#if PERTAG_VANITYGAPS_PATCH && PERTAG_PATCH
+    arrange(selmon);
+#else
+    arrange(NULL);
+#endif // PERTAG_VANITYGAPS_PATCH
 }
 
 static void

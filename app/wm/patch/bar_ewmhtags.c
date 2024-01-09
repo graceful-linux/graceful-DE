@@ -1,20 +1,20 @@
 void
 setcurrentdesktop(void)
 {
-	long data[] = { 0 };
-	XChangeProperty(dpy, root, netatom[NetCurrentDesktop], XA_CARDINAL, 32, PropModeReplace, (unsigned char *)data, 1);
+    long data[] = { 0 };
+    XChangeProperty(dpy, root, netatom[NetCurrentDesktop], XA_CARDINAL, 32, PropModeReplace, (unsigned char *)data, 1);
 }
 
 void
 setdesktopnames(void)
 {
-	int i;
-	XTextProperty text;
-	char *tags[NUMTAGS];
-	for (i = 0; i < NUMTAGS; i++)
-		tags[i] = tagicon(selmon, i);
-	Xutf8TextListToTextProperty(dpy, tags, NUMTAGS, XUTF8StringStyle, &text);
-	XSetTextProperty(dpy, root, &text, netatom[NetDesktopNames]);
+    int i;
+    XTextProperty text;
+    char *tags[NUMTAGS];
+    for (i = 0; i < NUMTAGS; i++)
+        tags[i] = tagicon(selmon, i);
+    Xutf8TextListToTextProperty(dpy, tags, NUMTAGS, XUTF8StringStyle, &text);
+    XSetTextProperty(dpy, root, &text, netatom[NetDesktopNames]);
 }
 
 void
@@ -28,15 +28,15 @@ setfloatinghint(Client *c)
 void
 setnumdesktops(void)
 {
-	long data[] = { NUMTAGS };
-	XChangeProperty(dpy, root, netatom[NetNumberOfDesktops], XA_CARDINAL, 32, PropModeReplace, (unsigned char *)data, 1);
+    long data[] = { NUMTAGS };
+    XChangeProperty(dpy, root, netatom[NetNumberOfDesktops], XA_CARDINAL, 32, PropModeReplace, (unsigned char *)data, 1);
 }
 
 void
 setviewport(void)
 {
-	long data[] = { 0, 0 };
-	XChangeProperty(dpy, root, netatom[NetDesktopViewport], XA_CARDINAL, 32, PropModeReplace, (unsigned char *)data, 2);
+    long data[] = { 0, 0 };
+    XChangeProperty(dpy, root, netatom[NetDesktopViewport], XA_CARDINAL, 32, PropModeReplace, (unsigned char *)data, 2);
 }
 
 void

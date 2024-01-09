@@ -7,9 +7,7 @@
 #if BAR_ALTERNATIVE_TAGS_PATCH
 #include "bar_alternativetags.c"
 #endif
-#if BAR_ANYBAR_PATCH
-#include "bar_anybar.c"
-#endif
+
 #if BAR_DWMBLOCKS_PATCH && BAR_STATUSCMD_PATCH
 #include "bar_dwmblocks.c"
 #endif
@@ -152,9 +150,7 @@
 #include "ipc/util.c"
 #endif
 #endif // IPC_PATCH
-#if INSETS_PATCH
-#include "insets.c"
-#endif
+
 #if KEYMODES_PATCH
 #include "keymodes.c"
 #endif
@@ -242,11 +238,7 @@
 #if SIZEHINTS_RULED_PATCH
 #include "sizehints_ruled.c"
 #endif
-#if SORTSCREENS_PATCH
-#ifdef XINERAMA
 #include "sortscreens.c"
-#endif // XINERAMA
-#endif
 #if STACKER_PATCH
 #include "stacker.c"
 #endif
@@ -263,9 +255,7 @@
 #if SWITCHCOL_PATCH
 #include "switchcol.c"
 #endif
-#if TAB_PATCH
-#include "tab.c"
-#endif
+
 #if TAGALL_PATCH
 #include "tagall.c"
 #endif
