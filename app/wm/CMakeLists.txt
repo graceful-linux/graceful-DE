@@ -4,6 +4,7 @@ include(${CMAKE_SOURCE_DIR}/app/common/common.cmake)
 
 add_executable(graceful-wm drw.c dwm.c util.c ${COMMON_SRC})
 target_include_directories(graceful-wm PRIVATE
+        ${XCB_INCLUDE_DIRS}
         ${XFT_INCLUDE_DIRS}
         ${X11_INCLUDE_DIRS}
         ${YAJL_INCLUDE_DIRS}
@@ -17,6 +18,7 @@ target_include_directories(graceful-wm PRIVATE
 )
 target_link_libraries(graceful-wm -lXfixes
         ${XFT_LIBRARIES}
+        ${XCB_LIBRARIES}
         ${X11_LIBRARIES}
         ${YAJL_LIBRARIES}
         ${GLIB_LIBRARIES}

@@ -403,14 +403,6 @@
  */
 #define ATTACHBOTTOM_PATCH 0
 
-/* This patch will make dwm run "~/.local/share/dwm/autostart_blocking.sh" and
- * "~/.local/share/dwm/autostart.sh &" before entering the handler loop. One or
- * both of these files can be ommited. Note the path inside .local/share rather
- * than the original ~/.dwm folder.
- * https://dwm.suckless.org/patches/autostart/
- */
-#define AUTOSTART_PATCH 0
-
 /* By default, windows that are not visible when requesting a resize/move will not
  * get resized/moved. With this patch, they will.
  * https://dwm.suckless.org/patches/autoresize/
@@ -464,12 +456,6 @@
  * https://dwm.suckless.org/patches/combo/
  */
 #define COMBO_PATCH 1
-
-/* Allow dwm to execute commands from autostart array in your config.h file. When dwm exits
- * then all processes from autostart array will be killed.
- * https://dwm.suckless.org/patches/cool_autostart/
- */
-#define COOL_AUTOSTART_PATCH 0
 
 /* Make dwm respect _MOTIF_WM_HINTS property, and not draw borders around windows requesting
  * for it. Some applications use this property to notify window managers to not draw window
@@ -824,12 +810,6 @@
  */
 #define RESIZEPOINT_PATCH 0
 
-/* Adds a keyboard shortcut to restart dwm or alternatively by using kill -HUP dwmpid.
- * Additionally dwm can quit cleanly by using kill -TERM dwmpid.
- * https://dwm.suckless.org/patches/restartsig/
- */
-#define RESTARTSIG_PATCH 0
-
 /* Adds rio-like drawing to resize the selected client.
  * This depends on an external tool slop being installed.
  * This patch was backported from instantWM.
@@ -1035,7 +1015,7 @@
  *
  * https://dwm.suckless.org/patches/swallow/
  */
-#define SWALLOW_PATCH 0
+#define SWALLOW_PATCH 1
 
 /* This patch depends on the pertag patch and makes it possible to switch focus with a single
  * shortcut (MOD+s) instead of having to think if you should use mod-j or mod-k for reaching

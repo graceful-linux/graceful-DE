@@ -2,7 +2,7 @@
 set -e
 
 versionMajor=0
-versionMinor=2
+versionMinor=3
 versionPatch=0
 versionTweak=0
 version="${versionMajor}.${versionMinor}.${versionPatch}.${versionTweak}"

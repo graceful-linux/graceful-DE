@@ -15,9 +15,7 @@ static const unsigned int borderpx       = 1;   /* border pixel of windows */
 static const unsigned int barborderpx    = 0;  /* border pixel of bar */
 #endif // BAR_BORDER_PATCH
 static const unsigned int snap           = 32;  /* snap pixel */
-#if SWALLOW_PATCH
 static const int swallowfloating         = 0;   /* 1 means swallow floating windows by default */
-#endif // SWALLOW_PATCH
 #if BAR_TAGPREVIEW_PATCH
 static const int scalepreview            = 4;        /* Tag preview scaling */
 #endif // BAR_TAGPREVIEW_PATCH
@@ -31,12 +29,7 @@ static const unsigned int gappoh         = 3;  /* horiz outer gap between window
 static const unsigned int gappov         = 3;  /* vert outer gap between windows and screen edge */
 static const int smartgaps_fact          = 1;   /* gap factor when there is only one client; 0 = no gaps, 3 = 3x outer gaps */
 #endif // VANITYGAPS_PATCH
-#if AUTOSTART_PATCH
-static const char autostartblocksh[]     = "autostart_blocking.sh";
-static const char autostartsh[]          = "autostart.sh";
-static const char dwmdir[]               = "dwm";
-static const char localshare[]           = ".local/share";
-#endif // AUTOSTART_PATCH
+
 #if BAR_ANYBAR_PATCH
 static const int usealtbar               = 1;        /* 1 means use non-dwm status bar */
 static const char *altbarclass           = "Polybar"; /* Alternate bar class name */
@@ -376,13 +369,6 @@ static char *statuscolors[][ColCount] = {
 #if BAR_LAYOUTMENU_PATCH
 static const char *layoutmenu_cmd = "layoutmenu.sh";
 #endif
-
-#if COOL_AUTOSTART_PATCH
-static const char *const autostart[] = {
-	"st", NULL,
-	NULL /* terminate */
-};
-#endif // COOL_AUTOSTART_PATCH
 
 #if RENAMED_SCRATCHPADS_PATCH
 static const char *scratchpadcmd[] = {"s", "st", "-n", "spterm", NULL};
@@ -995,9 +981,6 @@ static const Key keys[] = {
 	{ MODKEY|ShiftMask,             XK_r,          self_restart,           {0} },
 	#endif // SELFRESTART_PATCH
 	{ MODKEY|ShiftMask,             XK_q,          quit,                   {0} },
-	#if RESTARTSIG_PATCH
-	{ MODKEY|ControlMask|ShiftMask, XK_q,          quit,                   {1} },
-	#endif // RESTARTSIG_PATCH
 	#if FOCUSURGENT_PATCH
 	{ MODKEY,                       XK_u,          focusurgent,            {0} },
 	#endif // FOCUSURGENT_PATCH

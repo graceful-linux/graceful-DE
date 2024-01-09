@@ -58,10 +58,6 @@
 
 #include <pango/pango.h>
 
-#if RESTARTSIG_PATCH
-#include <poll.h>
-#endif // RESTARTSIG_PATCH
-
 #if XKB_PATCH
 #include <X11/XKBlib.h>
 #endif // XKB_PATCH
@@ -378,10 +374,8 @@ struct Client {
     #if SIZEHINTS_ISFREESIZE_PATCH
     int isfreesize;
     #endif // SIZEHINTS_ISFREESIZE_PATCH
-    #if SWALLOW_PATCH
     int isterminal, noswallow;
     pid_t pid;
-    #endif // SWALLOW_PATCH
     #if STEAM_PATCH
     int issteam;
     #endif // STEAM_PATCH
@@ -390,9 +384,7 @@ struct Client {
     #endif // STICKY_PATCH
     Client *next;
     Client *snext;
-    #if SWALLOW_PATCH
     Client *swallowing;
-    #endif // SWALLOW_PATCH
     Monitor *mon;
     Window win;
     #if IPC_PATCH
@@ -541,10 +533,8 @@ typedef struct {
     #if ISPERMANENT_PATCH
     int ispermanent;
     #endif // ISPERMANENT_PATCH
-    #if SWALLOW_PATCH
     int isterminal;
     int noswallow;
-    #endif // SWALLOW_PATCH
     #if FLOATPOS_PATCH
     const char *floatpos;
     #endif // FLOATPOS_PATCH
@@ -581,13 +571,8 @@ typedef struct {
 #else
 #define FAKEFULLSCREEN
 #endif // SELECTIVEFAKEFULLSCREEN_PATCH
-#if SWALLOW_PATCH
 #define NOSWALLOW , .noswallow = 1
 #define TERMINAL , .isterminal = 1
-#else
-#define NOSWALLOW
-#define TERMINAL
-#endif // SWALLOW_PATCH
 #if SWITCHTAG_PATCH
 #define SWITCHTAG , .switchtag = 1
 #else
@@ -686,9 +671,6 @@ static void setlayout(const Arg *arg);
 static void setmfact(const Arg *arg);
 static void setup(void);
 static void seturgent(Client *c, int urg);
-#if COOL_AUTOSTART_PATCH
-static void sigchld(int unused);
-#endif // COOL_AUTOSTART_PATCH
 static void showhide(Client *c);
 static void spawn(const Arg *arg);
 #if RIODRAW_PATCH
@@ -816,11 +798,7 @@ static Atom clientatom[ClientLast];
 #if ON_EMPTY_KEYS_PATCH
 static int isempty = 0;
 #endif // ON_EMPTY_KEYS_PATCH
-#if RESTARTSIG_PATCH
-static volatile sig_atomic_t running = 1;
-#else
 static int running = 1;
-#endif // RESTARTSIG_PATCH
 static Cur *cursor[CurLast];
 static Clr **scheme;
 static Display *dpy;
@@ -894,9 +872,7 @@ void apply_rules(Client *c)
     XClassHint ch = { NULL, NULL };
 
     /* rule matching */
-    #if SWALLOW_PATCH
     c->noswallow = -1;
-    #endif // SWALLOW_PATCH
     #if SIZEHINTS_ISFREESIZE_PATCH
     c->isfreesize = 1;
     #endif // SIZEHINTS_ISFREESIZE_PATCH
@@ -937,10 +913,8 @@ void apply_rules(Client *c)
             #if SELECTIVEFAKEFULLSCREEN_PATCH && FAKEFULLSCREEN_CLIENT_PATCH && !FAKEFULLSCREEN_PATCH
             c->fakefullscreen = r->isfakefullscreen;
             #endif // SELECTIVEFAKEFULLSCREEN_PATCH
-            #if SWALLOW_PATCH
             c->isterminal = r->isterminal;
             c->noswallow = r->noswallow;
-            #endif // SWALLOW_PATCH
             #if SIZEHINTS_ISFREESIZE_PATCH
             c->isfreesize = r->isfreesize;
             #endif // SIZEHINTS_ISFREESIZE_PATCH
@@ -968,14 +942,10 @@ void apply_rules(Client *c)
             #endif // FLOATPOS_PATCH
 
             #if SWITCHTAG_PATCH
-            #if SWALLOW_PATCH
             if (r->switchtag && (
                 c->noswallow > 0 ||
                 !termforwin(c) ||
                 !(c->isfloating && swallowfloating && c->noswallow < 0)))
-            #else
-            if (r->switchtag)
-            #endif // SWALLOW_PATCH
             {
                 selmon = c->mon;
                 if (r->switchtag == 2 || r->switchtag == 4)
@@ -1273,16 +1243,6 @@ void cleanup(void)
     for (m = mons; m; m = m->next)
         persistmonitorstate(m);
     #endif // SEAMLESS_RESTART_PATCH
-
-    #if COOL_AUTOSTART_PATCH
-    /* kill child processes */
-    for (i = 0; i < autostart_len; i++) {
-        if (0 < autostart_pids[i]) {
-            kill(autostart_pids[i], SIGTERM);
-            waitpid(autostart_pids[i], NULL, 0);
-        }
-    }
-    #endif // COOL_AUTOSTART_PATCH
 
     selmon->lt[selmon->sellt] = &foo;
     for (m = mons; m; m = m->next)
@@ -1804,10 +1764,8 @@ void destroy_notify(XEvent *e)
 
     if ((c = win_to_client(ev->window)))
         unmanage(c, 1);
-    #if SWALLOW_PATCH
     else if ((c = swallowingclient(ev->window)))
         unmanage(c->swallowing, 1);
-    #endif // SWALLOW_PATCH
     else if (showsystray && (c = wintosystrayicon(ev->window))) {
         removesystrayicon(c);
         drawbarwin(systray->bar);
@@ -2448,9 +2406,7 @@ killclient(const Arg *arg)
 void manage(Window w, XWindowAttributes *wa)
 {
     Client *c, *t = NULL;
-    #if SWALLOW_PATCH
     Client *term = NULL;
-    #endif // SWALLOW_PATCH
     #if SEAMLESS_RESTART_PATCH
     int settings_restored;
     #endif // SEAMLESS_RESTART_PATCH
@@ -2459,9 +2415,7 @@ void manage(Window w, XWindowAttributes *wa)
 
     c = ecalloc(1, sizeof(Client));
     c->win = w;
-    #if SWALLOW_PATCH
     c->pid = winpid(w);
-    #endif // SWALLOW_PATCH
     /* geometry */
     c->sfx = c->sfy = c->sfw = c->sfh = -9999;
     c->x = c->oldx = wa->x;
@@ -2527,11 +2481,9 @@ void manage(Window w, XWindowAttributes *wa)
         #else
         apply_rules(c);
         #endif // SEAMLESS_RESTART_PATCH
-        #if SWALLOW_PATCH
         term = termforwin(c);
         if (term)
             c->mon = term->mon;
-        #endif // SWALLOW_PATCH
     }
 
     if (unmanaged) {
@@ -2643,7 +2595,6 @@ void manage(Window w, XWindowAttributes *wa)
     if (c->mon == selmon)
         unfocus(selmon->sel, 0, c);
     c->mon->sel = c;
-    #if SWALLOW_PATCH
     if (!(term && swallow(term, c))) {
         #if RIODRAW_PATCH
         if (riopid && (!riodraw_matchpid || isdescprocess(riopid, c->pid))) {
@@ -2663,25 +2614,6 @@ void manage(Window w, XWindowAttributes *wa)
         XMapWindow(dpy, c->win);
         #endif // BAR_WINTITLEACTIONS_PATCH
     }
-    #else
-    #if RIODRAW_PATCH
-    if (riopid) {
-        if (riodimensions[3] != -1)
-            rioposition(c, riodimensions[0], riodimensions[1], riodimensions[2], riodimensions[3]);
-        else {
-            killclient(&((Arg) { .v = c }));
-            return;
-        }
-    }
-    #endif // RIODRAW_PATCH
-    arrange(c->mon);
-    #if BAR_WINTITLEACTIONS_PATCH
-    if (!HIDDEN(c))
-        XMapWindow(dpy, c->win);
-    #else
-    XMapWindow(dpy, c->win);
-    #endif // BAR_WINTITLEACTIONS_PATCH
-    #endif // SWALLOW_PATCH
     focus(NULL);
     setfloatinghint(c);
 }
@@ -2944,9 +2876,6 @@ propertynotify(XEvent *e)
 void
 quit(const Arg *arg)
 {
-    #if RESTARTSIG_PATCH
-    restart = arg->i;
-    #endif // RESTARTSIG_PATCH
     #if ONLYQUITONEMPTY_PATCH
     Monitor *m;
     Client *c;
@@ -2955,11 +2884,7 @@ quit(const Arg *arg)
     for (m = mons; m; m = m->next)
         for (c = m->clients; c; c = c->next, n++);
 
-    #if RESTARTSIG_PATCH
-    if (restart || n <= quit_empty_window_count)
-    #else
     if (n <= quit_empty_window_count)
-    #endif // RESTARTSIG_PATCH
         running = 0;
     else
         fprintf(stderr, "[graceful-wm] not exiting (n=%d)\n", n);
@@ -3262,30 +3187,6 @@ run(void)
         }
     }
 }
-#elif RESTARTSIG_PATCH
-void
-run(void)
-{
-    XEvent ev;
-    XSync(dpy, False);
-    /* main event loop */
-    while (running) {
-        struct pollfd pfd = {
-            .fd = ConnectionNumber(dpy),
-            .events = POLLIN,
-        };
-        int pending = XPending(dpy) > 0 || poll(&pfd, 1, -1) > 0;
-
-        if (!running)
-            break;
-        if (!pending)
-            continue;
-
-        XNextEvent(dpy, &ev);
-        if (handler[ev.type])
-            handler[ev.type](&ev); /* call handler */
-    }
-}
 #else
 void run(void)
 {
@@ -3310,13 +3211,10 @@ void run(void)
 }
 #endif // IPC_PATCH | RESTARTSIG_PATCH
 
-void
-scan(void)
+void scan(void)
 {
-    #if SWALLOW_PATCH
     scanner = 1;
     char swin[256];
-    #endif // SWALLOW_PATCH
     unsigned int i, num;
     Window d1, d2, *wins = NULL;
     XWindowAttributes wa;
@@ -3333,10 +3231,8 @@ scan(void)
             #endif // BAR_ANYBAR_PATCH
             if (wa.map_state == IsViewable || getstate(wins[i]) == IconicState)
                 manage(wins[i], &wa);
-            #if SWALLOW_PATCH
             else if (gettextprop(wins[i], netatom[NetClientList], swin, sizeof swin))
                 manage(wins[i], &wa);
-            #endif // SWALLOW_PATCH
         }
         for (i = 0; i < num; i++) { /* now the transients */
             if (!XGetWindowAttributes(dpy, wins[i], &wa))
@@ -3347,9 +3243,7 @@ scan(void)
         }
         XFree(wins);
     }
-    #if SWALLOW_PATCH
     scanner = 0;
-    #endif // SWALLOW_PATCH
 }
 
 void
@@ -3669,10 +3563,6 @@ void setup(void)
     XkbStateRec xkbstate;
     #endif // XKB_PATCH
     Atom utf8string;
-    #if COOL_AUTOSTART_PATCH
-    /* clean up any zombies immediately */
-    sigchld(0);
-    #else
 
     // timer for date time
     {
@@ -3704,12 +3594,6 @@ void setup(void)
     sigaction(SIGCHLD, &sa, NULL);
 
     while (waitpid(-1, NULL, WNOHANG) > 0);
-    #endif // COOL_AUTOSTART_PATCH
-
-    #if RESTARTSIG_PATCH
-    signal(SIGHUP, sighup);
-    signal(SIGTERM, sigterm);
-    #endif // RESTARTSIG_PATCH
 
     /* the one line of bloat that would have saved a lot of time for a lot of people */
     putenv("_JAVA_AWT_WM_NONREPARENTING=1");
@@ -3968,32 +3852,6 @@ showhide(Client *c)
         XMoveWindow(dpy, c->win, WIDTH(c) * -2, c->y);
     }
 }
-
-#if COOL_AUTOSTART_PATCH
-void
-sigchld(int unused)
-{
-    pid_t pid;
-
-    if (signal(SIGCHLD, sigchld) == SIG_ERR)
-        die("can't install SIGCHLD handler:");
-
-    while (0 < (pid = waitpid(-1, NULL, WNOHANG))) {
-        pid_t *p, *lim;
-
-        if (!(p = autostart_pids))
-            continue;
-        lim = &p[autostart_len];
-
-        for (; p < lim; p++) {
-            if (*p == pid) {
-                *p = -1;
-                break;
-            }
-        }
-    }
-}
-#endif // COOL_AUTOSTART_PATCH
 
 #if RIODRAW_PATCH
 void
@@ -4426,7 +4284,6 @@ unmanage(Client *c, int destroyed)
     #endif // ZOOMSWAP_PATCH
     m = c->mon;
 
-    #if SWALLOW_PATCH
     if (c->swallowing) {
         unswallow(c);
         return;
@@ -4440,7 +4297,6 @@ unmanage(Client *c, int destroyed)
         focus(NULL);
         return;
     }
-    #endif // SWALLOW_PATCH
 
     detach(c);
     detachstack(c);
@@ -4476,10 +4332,8 @@ unmanage(Client *c, int destroyed)
     #endif // SCRATCHPAD_ALT_1_PATCH
 
     free(c);
-    #if SWALLOW_PATCH
     if (s)
         return;
-    #endif // SWALLOW_PATCH
     arrange(m);
     focus(NULL);
     updateclientlist();
@@ -5159,19 +5013,15 @@ int main(int argc, char *argv[])
     }
 
     {
-        // x fixes
         XFixesSetClientDisconnectMode (dpy, XFixesClientDisconnectFlagTerminate);
     }
 
-    #if SWALLOW_PATCH
-    if (!(xcon = XGetXCBConnection(dpy)))
-        die("graceful-wm: cannot get xcb connection\n");
-    #endif // SWALLOW_PATCH
+    if (!(xcon = XGetXCBConnection(dpy))) {
+        LOG_DIE("graceful-wm: cannot get xcb connection");
+    }
+
     check_other_wm();
 
-    #if COOL_AUTOSTART_PATCH
-    autostart_exec();
-    #endif // COOL_AUTOSTART_PATCH
     setup();
 #ifdef __OpenBSD__
     #if SWALLOW_PATCH
@@ -5182,17 +5032,13 @@ int main(int argc, char *argv[])
         die("pledge");
 #endif /* __OpenBSD__ */
     scan();
-    #if AUTOSTART_PATCH
-    runautostart();
-    #endif
+
     run();
     cleanup();
     XCloseDisplay(dpy);
-    #if RESTARTSIG_PATCH
-    if (restart)
-        execvp(argv[0], argv);
-    #endif // RESTARTSIG_PATCH
-    LOG_INFO(APP_NAME " stopped!")
+
+    LOG_INFO(APP_NAME " stopped!");
+
     return EXIT_SUCCESS;
 }
 

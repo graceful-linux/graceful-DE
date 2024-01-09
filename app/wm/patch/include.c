@@ -99,16 +99,11 @@
 #include "aspectresize.c"
 #endif
 #include "attachx.c"
-#if AUTOSTART_PATCH
-#include "autostart.c"
-#endif
+
 #if CFACTS_PATCH
 #include "cfacts.c"
 #endif
 
-#if COOL_AUTOSTART_PATCH
-#include "cool_autostart.c"
-#endif
 #include "cyclelayouts.c"
 #if DECORATION_HINTS_PATCH
 #include "decorationhints.c"
@@ -201,9 +196,7 @@
 #if REORGANIZETAGS_PATCH
 #include "reorganizetags.c"
 #endif
-#if RESTARTSIG_PATCH
-#include "restartsig.c"
-#endif
+
 #if RIODRAW_PATCH
 #include "riodraw.c"
 #endif
@@ -262,9 +255,7 @@
 #if STICKY_PATCH
 #include "sticky.c"
 #endif
-#if SWALLOW_PATCH
 #include "swallow.c"
-#endif
 #if SWAPFOCUS_PATCH && PERTAG_PATCH
 #include "swapfocus.c"
 #endif

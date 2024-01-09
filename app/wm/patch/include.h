@@ -91,15 +91,8 @@
 #if 1 || ATTACHASIDE_PATCH || ATTACHBELOW_PATCH || ATTACHBOTTOM_PATCH || SEAMLESS_RESTART_PATCH
 #include "attachx.h"
 #endif
-#if AUTOSTART_PATCH
-#include "autostart.h"
-#endif
 #if CFACTS_PATCH
 #include "cfacts.h"
-#endif
-
-#if COOL_AUTOSTART_PATCH
-#include "cool_autostart.h"
 #endif
 #include "cyclelayouts.h"
 #if DECORATION_HINTS_PATCH
@@ -190,9 +183,7 @@
 #if REORGANIZETAGS_PATCH
 #include "reorganizetags.h"
 #endif
-#if RESTARTSIG_PATCH
-#include "restartsig.h"
-#endif
+
 #if RIODRAW_PATCH
 #include "riodraw.h"
 #endif
@@ -254,9 +245,7 @@
 #if STICKY_PATCH
 #include "sticky.h"
 #endif
-#if SWALLOW_PATCH
 #include "swallow.h"
-#endif
 #if SWAPFOCUS_PATCH && PERTAG_PATCH
 #include "swapfocus.h"
 #endif
