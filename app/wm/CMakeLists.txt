@@ -2,7 +2,10 @@ project(graceful-wm C)
 
 include(${CMAKE_SOURCE_DIR}/app/common/common.cmake)
 
-add_executable(graceful-wm drw.c dwm.c util.c ${COMMON_SRC})
+add_executable(graceful-wm
+        graceful-error.h
+        graceful-wm-app.c graceful-wm-app.h
+        drw.c dwm.c util.c ${COMMON_SRC})
 target_include_directories(graceful-wm PRIVATE
         ${XCB_INCLUDE_DIRS}
         ${XFT_INCLUDE_DIRS}

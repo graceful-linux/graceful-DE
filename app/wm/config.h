@@ -1,6 +1,16 @@
 /* See LICENSE file for copyright and license details. */
-#include <stdlib.h>
+#include <glib.h>
+#include <stdbool.h>
 
+
+
+
+
+
+
+
+// 以后要删除
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /* appearance */
 #if ROUNDED_CORNERS_PATCH
 static const unsigned int borderpx       = 0;   /* border pixel of windows */

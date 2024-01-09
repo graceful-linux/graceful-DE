@@ -69,6 +69,10 @@
 #define SPAWN_CWD_DELIM " []{}()<>\"':"
 #endif // SPAWNCMD_PATCH
 
+
+#include "graceful-wm-app.h"
+
+
 /* macros */
 #define Button6                 6
 #define Button7                 7
@@ -794,42 +798,7 @@ struct NumTags { char limitexceeded[NUMTAGS > 31 ? -1 : 1]; };
 #endif // SCRATCHPAD_ALT_1_PATCH
 
 /* function implementations */
-static void timer_handler(int signum)
-{
-    Atom utf8string = XInternAtom(dpy, "UTF8_STRING", False);
 
-    time_t currentTime;
-    time (&currentTime);
-
-    struct tm* localTime = localtime (&currentTime);
-    if (localTime) {
-        char buf[32] = {0};
-        snprintf (buf, sizeof(buf) - 1, "%4d-%02d-%02d %02d:%02d:%02d",
-                  localTime->tm_year + 1900,
-                  localTime->tm_mon + 1,
-                  localTime->tm_mday,
-                  localTime->tm_hour,
-                  localTime->tm_min,
-                  localTime->tm_sec
-                  );
-        XChangeProperty(dpy, root, gsCustomStatusAtoms[CUSTOM_STATUS_TIME], utf8string, 8, PropModeReplace, (unsigned char *) (buf), (int) strlen(buf));
-
-        {
-            XEvent ev;
-            ev.type = ClientMessage;
-            ev.xclient.window = root;
-            ev.xclient.message_type = gsCustomStatusAtoms[CUSTOM_STATUS_TIME];
-            ev.xclient.format = 8;
-            ev.xclient.data.l[0] = 0;
-            ev.xclient.data.l[1] = 0;
-            ev.xclient.data.l[2] = 0;
-            ev.xclient.data.l[3] = 0;
-            ev.xclient.data.l[4] = 0;
-            XSendEvent (dpy, root, False, StructureNotifyMask, &ev);
-            XFlush (dpy);
-        }
-    }
-}
 
 void apply_rules(Client *c)
 {
@@ -1164,17 +1133,6 @@ buttonpress(XEvent *e)
     }
 }
 
-void check_other_wm(void)
-{
-    xerrorxlib = XSetErrorHandler(xerror_start);
-
-    // 当其它窗口管理器在使用时候会主动退出
-    // FIXME:// 添加 --replace 选项替换掉当前正在运行的窗口管理器
-    XSelectInput(dpy, DefaultRootWindow(dpy), SubstructureRedirectMask);
-    XSync(dpy, False);
-    XSetErrorHandler(xerror);
-    XSync(dpy, False);
-}
 
 void cleanup(void)
 {
@@ -3455,39 +3413,6 @@ void setup(void)
     #endif // XKB_PATCH
     Atom utf8string;
 
-    // timer for date time
-    {
-        // FIXME:// 重新实现时间显示
-        struct itimerval timer;
-
-        struct sigaction timerSA;
-        sigemptyset(&timerSA.sa_mask);
-
-        timerSA.sa_flags = 0;
-        timerSA.sa_handler = timer_handler;
-
-        sigaction(SIGALRM, &timerSA, NULL);
-
-        // 配置时间间隔
-        timer.it_value.tv_sec = 1;
-        timer.it_value.tv_usec = 0;
-        timer.it_interval.tv_sec = 1;   // 每秒更新一次
-        timer.it_interval.tv_usec = 0;
-        setitimer (ITIMER_REAL, &timer, NULL);
-    }
-
-    {
-        struct sigaction sa;
-        sigemptyset(&sa.sa_mask);
-
-        sa.sa_flags = SA_NOCLDSTOP | SA_NOCLDWAIT | SA_RESTART;
-        sa.sa_handler = SIG_IGN;
-        sigaction(SIGCHLD, &sa, NULL);
-    }
-
-    while (waitpid(-1, NULL, WNOHANG) > 0);             // 等待所有子进程退出
-
-    putenv("_JAVA_AWT_WM_NONREPARENTING=1");
 
     /* init screen */
     screen = DefaultScreen(dpy);
@@ -4683,8 +4608,7 @@ int xerror_start(Display *dpy, XErrorEvent *ee)
     return -1;
 }
 
-void
-zoom(const Arg *arg)
+void zoom(const Arg *arg)
 {
     Client *c = selmon->sel;
     #if FOCUSMASTER_RETURN_PATCH && ZOOMSWAP_PATCH
@@ -4779,35 +4703,21 @@ zoom(const Arg *arg)
 
 int main(int argc, char *argv[])
 {
-    if (argc == 2 && !strcmp("-v", argv[1])) {
-        printf (APP_NAME ": " VERSION "\n");
-        return 0;
-    }
-    else if (argc != 1) {
-        printf ("usage" APP_NAME "[-v]\n");
-        return 0;
-    }
-
-    if (!setlocale(LC_CTYPE, "") || !XSupportsLocale()) {
-        printf("warning: no locale support\n");
-    }
-
     g_log_set_writer_func (log_handler, NULL, NULL);
     LOG_INFO(APP_NAME " start...")
 
-    if (!(dpy = XOpenDisplay(NULL))) {
-        LOG_DIE("graceful-wm: cannot open display");
+    g_autoptr (GError) error = NULL;
+    g_autoptr (GWMApp) app = gwm_app_new (argc, argv);
+    if (!app) {
+        LOG_DIE("init " APP_NAME " error!");
     }
 
-    {
-        XFixesSetClientDisconnectMode (dpy, XFixesClientDisconnectFlagTerminate);
+    if (!gwm_app_initialize (app, &error)) {
+        LOG_DIE("initialize error: %s", error->message);
     }
 
-    if (!(xcon = XGetXCBConnection(dpy))) {
-        LOG_DIE("graceful-wm: cannot get xcb connection");
-    }
-
-    check_other_wm();
+    dpy = gwm_get_display (app);                    // FIXME://
+    xcon = gwm_get_xcb_connection (app);            // FIXME://
 
     setup();
 #ifdef __OpenBSD__
