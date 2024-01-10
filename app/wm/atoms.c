@@ -143,14 +143,14 @@ static void register_atom (Display* dsp, AtomEnum eum, const char* atomName)
             info->atomEnum = eum;
             info->atomName = g_strdup(atomName);
             if (G_UNLIKELY((!info->atomName))
-                || g_hash_table_contains (gsAtomAN, (void*) atom)
-                || g_hash_table_contains (gsAtomNA, (void*) info->atomName)) {
+                || g_hash_table_contains (gsAtomAN, (void*) &(info->atom))
+                || g_hash_table_contains (gsAtomNA, (void*) (info->atomName))) {
                 g_free (info);
                 LOG_WARNING("Memory malloc error or hash error!");
             }
             else {
-                g_hash_table_insert (gsAtomAN, (void*) atom, (void*) eum);
-                g_hash_table_insert (gsAtomNA, (void*) info->atomName, (void*) atom);
+                g_hash_table_insert (gsAtomAN, (void*) &(info->atom), (void*) (info->atomEnum));
+                g_hash_table_insert (gsAtomNA, (void*) (info->atomName), (void*) (info->atom));
             }
         }
     }

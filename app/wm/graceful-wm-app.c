@@ -271,12 +271,12 @@ static void timer_handler(int signum)
     if (localTime) {
         char buf[32] = {0};
         snprintf (buf, sizeof(buf) - 1, "%4d-%02d-%02d %02d:%02d:%02d",
-                  localTime->tm_year + 1900,
-                  localTime->tm_mon + 1,
-                  localTime->tm_mday,
-                  localTime->tm_hour,
-                  localTime->tm_min,
-                  localTime->tm_sec
+                    localTime->tm_year + 1900,
+                    localTime->tm_mon + 1,
+                    localTime->tm_mday,
+                    localTime->tm_hour,
+                    localTime->tm_min,
+                    localTime->tm_sec
         );
 
         XChangeProperty(dpy, root, dateTimeAtom, utf8string, 8, PropModeReplace, (unsigned char*) (buf), (int) strlen (buf));
