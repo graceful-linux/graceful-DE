@@ -59,7 +59,7 @@ if [[ -x "/usr/bin/ibus-daemon" ]]; then
 fi
 
 # 启动窗口组合管理器
-start /usr/bin/graceful-compton --config /etc/graceful-linux/compton.conf
+start /usr/bin/graceful-compton #--config /etc/graceful-linux/compton.conf
 
 # 启动 Gtk 设置
 start /usr/bin/graceful-settings

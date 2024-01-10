@@ -16,6 +16,7 @@
 #include <X11/Xproto.h>
 
 #include "log.h"
+#include "atoms.h"
 #include "macro.h"
 
 
@@ -260,7 +261,8 @@ static void timer_handler(int signum)
     Display* dpy = gsApp->display;
     Window root = gsApp->rootWindow;
 
-    Atom utf8string = XInternAtom(dpy, "UTF8_STRING", False);
+    Atom utf8string = gwm_atoms_get_atom_by_enum (dpy, ATOM_COMMON_UTF8_STRING);
+    Atom dateTimeAtom = gwm_atoms_get_atom_by_enum (dpy, ATOM_CUSTOM_DATE_TIME);
 
     time_t currentTime;
     time (&currentTime);
@@ -277,13 +279,13 @@ static void timer_handler(int signum)
                   localTime->tm_sec
         );
 
-        XChangeProperty(dpy, root, gsCustomStatusAtoms[CUSTOM_STATUS_TIME], utf8string, 8, PropModeReplace, (unsigned char*) (buf), (int) strlen (buf));
+        XChangeProperty(dpy, root, dateTimeAtom, utf8string, 8, PropModeReplace, (unsigned char*) (buf), (int) strlen (buf));
 
         {
             XEvent ev;
             ev.type = ClientMessage;
             ev.xclient.window = root;
-            ev.xclient.message_type = gsCustomStatusAtoms[CUSTOM_STATUS_TIME];
+            ev.xclient.message_type = dateTimeAtom;
             ev.xclient.format = 8;
             ev.xclient.data.l[0] = 0;
             ev.xclient.data.l[1] = 0;

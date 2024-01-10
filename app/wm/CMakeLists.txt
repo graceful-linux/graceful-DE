@@ -4,6 +4,7 @@ include(${CMAKE_SOURCE_DIR}/app/common/common.cmake)
 
 add_executable(graceful-wm
         graceful-error.h
+        atoms.c atoms.h
         graceful-wm-app.c graceful-wm-app.h
         drw.c dwm.c util.c ${COMMON_SRC})
 target_include_directories(graceful-wm PRIVATE
