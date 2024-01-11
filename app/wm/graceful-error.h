@@ -17,6 +17,7 @@ enum GWMErrorCode
     GWM_ERROR_CANNOT_CONNECT_WITH_XCB,
     GWM_ERROR_WM_ALREADY_EXISTS,
     GWM_ERROR_CANNOT_GET_ROOT_WINDOW,
+    GWM_ERROR_X_FUNCTION_ERROR,
     GWM_ERROR_MAX,
 };
 
@@ -33,6 +34,7 @@ static GWMError gError[] = {
     {GWM_ERROR_CANNOT_CONNECT_WITH_XCB,     N_("Cannot connect to X server with xcb.")},
     {GWM_ERROR_WM_ALREADY_EXISTS,           N_("Another window manager already running.")},
     {GWM_ERROR_CANNOT_GET_ROOT_WINDOW,      N_("Cannot get root window.")},
+    {GWM_ERROR_X_FUNCTION_ERROR,            N_("X function return error.")},
     {GWM_ERROR_MAX, ""},
 };
 

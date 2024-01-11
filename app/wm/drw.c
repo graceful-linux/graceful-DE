@@ -358,8 +358,7 @@ Cur* drw_cur_create(Drw *drw, int shape)
     return cur;
 }
 
-void
-drw_cur_free(Drw *drw, Cur *cursor)
+void drw_cur_free(Drw *drw, Cur *cursor)
 {
     if (!cursor)
         return;

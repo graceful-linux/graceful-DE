@@ -14,6 +14,8 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <X11/Xproto.h>
+#include <X11/Xutil.h>
+#include <X11/extensions/Xrender.h>
 
 #include "log.h"
 #include "atoms.h"
@@ -30,6 +32,12 @@ struct _GWMApp
     xcb_connection_t*       xcbConn;
     Window                  rootWindow;
     int                     defaultScreen;
+
+    int                     defaultScreenWidth;
+    int                     defaultScreenHeight;
+    Visual*                 visual;
+    int                     depth;
+    Colormap                colorMap;
 
     bool                    isRunning;
 };
@@ -114,7 +122,6 @@ bool gwm_app_initialize(GWMApp *app, GError **error)
         }
 
         app->defaultScreen = DefaultScreen(app->display);
-
         if (BadWindow == (app->rootWindow = RootWindow(app->display, app->defaultScreen))) {
             GWM_SET_ERROR(error, GWM_ERROR_CANNOT_GET_ROOT_WINDOW);
             return false;
@@ -181,6 +188,43 @@ bool gwm_app_initialize(GWMApp *app, GError **error)
     // java
     {
         putenv("_JAVA_AWT_WM_NONREPARENTING=1");
+    }
+
+    // 初始化显示相关参数
+    {
+        app->defaultScreenWidth = DisplayWidth(app->display, app->rootWindow);
+        app->defaultScreenHeight = DisplayHeight(app->display, app->rootWindow);
+
+        XVisualInfo tpl = {
+            .screen = app->defaultScreen,
+            .depth = 32,
+            .class = TrueColor
+        };
+
+        int nItems;
+        long masks = VisualScreenMask | VisualDepthMask | VisualClassMask;
+        XVisualInfo* info = XGetVisualInfo (app->display, masks, &tpl, &nItems);
+        if (G_UNLIKELY(!info)) {
+            GWM_SET_ERROR(error, GWM_ERROR_X_FUNCTION_ERROR);
+            return false;
+        }
+
+        XRenderPictFormat* fmt;
+        for (int i = 0; i < nItems; ++i) {
+            fmt = XRenderFindVisualFormat (app->display, info[i].visual);
+            if (PictTypeDirect == fmt->type && fmt->direct.alphaMask) {
+                app->visual = info[i].visual;
+                app->depth = info[i].depth;
+                app->colorMap = XCreateColormap (app->display, app->rootWindow, app->visual, AllocNone);
+                break;
+            }
+        }
+        XFree (info);
+        if (!app->visual) {
+            app->visual = DefaultVisual(app->display, app->defaultScreen);
+            app->depth = DefaultDepth(app->display, app->defaultScreen);
+            app->colorMap = DefaultColormap(app->display, app->defaultScreen);
+        }
     }
 
     return true;
